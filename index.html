@@ -86,7 +86,8 @@
   #big {
     position: fixed; inset: 0; z-index: 50; display: none;
     flex-direction: column; align-items: center; justify-content: center;
-    background: var(--ink); color: #fff; text-align: center; padding: 4vw; gap: 3vh;
+    /* fixed dark panel in BOTH themes — never derive from --ink, which is light in dark mode */
+    background: #10141c; color: #fff; text-align: center; padding: 4vw; gap: 3vh;
   }
   #big.show { display: flex; }
   #big .em { font-size: clamp(70px, 16vw, 180px); line-height: 1; }
@@ -226,6 +227,8 @@
     html:not(.force-light) .choice-input { border-color: #3a3f4d; background: var(--card); color: var(--ink); }
     html:not(.force-light) .person-row { border-bottom-color: #343947; }
     html:not(.force-light) .tile img.face { border-color: #3a3f4d; }
+    html:not(.force-light) .primary-btn { background: #2b5ea8; color: #fff; }
+    html:not(.force-light) .toggle-btn.on { color: #10141c; }
   }
   html.force-dark {
     --bg: #14161b; --card: #232733; --ink: #edeff4; --muted: #a6adbd;
@@ -244,6 +247,8 @@
   html.force-dark .choice-input { border-color: #3a3f4d; background: var(--card); color: var(--ink); }
   html.force-dark .person-row { border-bottom-color: #343947; }
   html.force-dark .tile img.face { border-color: #3a3f4d; }
+  html.force-dark .primary-btn { background: #2b5ea8; color: #fff; }
+  html.force-dark .toggle-btn.on { color: #10141c; }
 </style>
 </head>
 <body>

@@ -249,6 +249,14 @@
   html.force-dark .tile img.face { border-color: #3a3f4d; }
   html.force-dark .primary-btn { background: #2b5ea8; color: #fff; }
   html.force-dark .toggle-btn.on { color: #10141c; }
+
+  /* ---------- one-column layout (right visual-field loss / left-hand reach) ---------- */
+  html.one-col .grid, html.one-col .grid.big { grid-template-columns: minmax(0, 440px); justify-content: flex-start; }
+  html.one-col #topbar { flex-wrap: wrap; max-width: 464px; }
+  html.one-col #btn-yes, html.one-col #btn-no { flex: 1 1 100%; min-height: 76px; }
+  html.one-col #btn-again, html.one-col #btn-home { flex: 1 1 40%; min-height: 64px; }
+  html.one-col #big { align-items: flex-start; text-align: left; padding-left: 5vw; }
+  html.one-col .scene-wrap { margin: 0; }
 </style>
 </head>
 <body>

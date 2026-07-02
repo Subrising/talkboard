@@ -3,7 +3,7 @@
 
 /* ================= state ================= */
 const DEFAULTS = {
-  mode: 'full', rate: 0.9, voiceURI: null,
+  mode: 'simple', rate: 0.9, voiceURI: null, layout: 'grid',
   people: [
     { name: 'Delma',  photo: null },
     { name: 'David',  photo: null },
@@ -15,7 +15,7 @@ const DEFAULTS = {
   ntfy: '',
   callName: '',
   scenes: [],
-  btnSize: 'normal',
+  btnSize: 'big',
   choiceSets: [],
   recVoice: 'william',
   theme: 'auto',
@@ -310,12 +310,14 @@ SCREENS.home = () => {
     g.appendChild(yes); g.appendChild(no); g.appendChild(pain); g.appendChild(need);
     g.appendChild(callTile(true));
   } else if (S.mode === 'simple') {
-    [NEEDS[0], NEEDS[1], NEEDS[2]].forEach(n => g.appendChild(tileBtn(n)));
+    const byLbl = (list, lbl) => list.find(x => x.lbl === lbl);
+    [byLbl(NEEDS, 'Drink'), byLbl(NEEDS, 'Toilet'), byLbl(NEEDS, 'Nurse')].forEach(n => g.appendChild(tileBtn(n)));
     const pain = el('<button class="tile warn">' + tileVisual(painItem) + '<div class="lbl">Pain</div></button>');
     pain.addEventListener('click', () => showBig('🤕', 'PAIN', "I'm in pain", null, I('pain')));
     g.appendChild(pain);
-    g.appendChild(tileBtn(NEEDS[11]));
-    g.appendChild(tileBtn(FEELINGS[0]));
+    g.appendChild(tileBtn(byLbl(NEEDS, 'Hungry')));
+    g.appendChild(tileBtn(byLbl(NEEDS, 'Rest')));
+    g.appendChild(tileBtn(byLbl(FEELINGS, 'I love you')));
     g.appendChild(callTile(false));
   } else {
     if (S.recent && S.recent.length) {
@@ -656,6 +658,16 @@ SCREENS.settings = () => {
   });
   wrap.appendChild(thRow);
 
+  /* layout */
+  const lyRow = el('<div class="set-row"><h3>Layout</h3><label>If he only notices things on the LEFT side of the screen (common after a left-side brain injury), switch to one column — everything lines up down the left where he can see and reach it.</label><div></div></div>');
+  const lyBtns = lyRow.querySelector('div:last-child');
+  [['grid', 'Grid'], ['column', 'One column (left)']].forEach(([k, lbl]) => {
+    const b = el('<button class="toggle-btn' + (S.layout === k ? ' on' : '') + '">' + lbl + '</button>');
+    b.addEventListener('click', () => { S.layout = k; save(); applyLayout(); show('settings'); });
+    lyBtns.appendChild(b);
+  });
+  wrap.appendChild(lyRow);
+
   /* button size */
   const sizeRow = el('<div class="set-row"><h3>Button size</h3><label>Bigger buttons are easier to hit but fit fewer per screen.</label><div></div></div>');
   const sizeBtns = sizeRow.querySelector('div:last-child');
@@ -847,6 +859,11 @@ function applyTheme() {
   document.documentElement.classList.toggle('force-light', S.theme === 'light');
 }
 applyTheme();
+
+function applyLayout() {
+  document.documentElement.classList.toggle('one-col', S.layout === 'column');
+}
+applyLayout();
 
 /* Keep the screen awake while the board is open, so he never faces a lock screen. */
 let wakeLock = null;

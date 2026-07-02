@@ -32,3 +32,8 @@ Repeat step 1–2 on your phone and laptop. Add people/photos on each device you
 - Give him time — the words are there even when they won't come out.
 - If speech fails, hand him the board; if the board fails, offer two choices with your hands apart and let him point.
 - His understanding may be better than his output — keep talking *to* him normally.
+- More tips are inside the app: ⚙️ Settings → *Read the tips*.
+
+## Credits
+
+Pictographic symbols © Government of Aragón (Spain), author Sergio Palao, from [ARASAAC](https://arasaac.org), licensed CC BY-NC-SA. Used here for personal, non-commercial care.

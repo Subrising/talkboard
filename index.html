@@ -73,6 +73,7 @@
     width: clamp(72px, 11vw, 110px); height: clamp(72px, 11vw, 110px);
     border-radius: 50%; object-fit: cover; border: 3px solid #e7e2d8;
   }
+  .tile img.pic { width: clamp(60px, 9vw, 100px); height: clamp(60px, 9vw, 100px); object-fit: contain; }
   .backbtn {
     background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
     font-size: clamp(18px, 2.6vw, 24px); font-weight: 700; color: var(--muted);
@@ -88,6 +89,7 @@
   #big.show { display: flex; }
   #big .em { font-size: clamp(70px, 16vw, 180px); line-height: 1; }
   #big img.face { width: clamp(140px, 24vw, 260px); height: clamp(140px, 24vw, 260px); border-radius: 50%; object-fit: cover; border: 5px solid #fff; }
+  #big img.pic { width: clamp(130px, 22vw, 240px); height: clamp(130px, 22vw, 240px); object-fit: contain; background: #fff; border-radius: 24px; padding: 10px; }
   #big .txt { font-size: clamp(44px, 9vw, 120px); font-weight: 800; line-height: 1.1; }
   #big .row { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
   #big button {
@@ -155,6 +157,26 @@
   #gear {
     position: fixed; right: 12px; bottom: 10px; z-index: 10;
     background: none; font-size: 24px; opacity: .35; padding: 10px;
+  }
+
+  /* ---------- phone-size layout ---------- */
+  @media (max-width: 540px) {
+    #topbar { gap: 6px; padding: 6px 6px 2px; }
+    #topbar button { min-height: 62px; border-radius: 16px; }
+    #screen { padding: 8px; }
+    .grid, .grid.big { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .tile { min-height: 116px; padding: 10px 6px; border-radius: 16px; }
+    .grid.big .tile { min-height: 132px; }
+    .tile .em { font-size: 40px; }
+    .tile .lbl { font-size: 19px; }
+    .tile img.pic { width: 56px; height: 56px; }
+    .kb, .kb-row { gap: 4px; }
+    .key { min-height: 54px; font-size: 19px; border-radius: 10px; }
+    .key.action { font-size: 15px; }
+    #talk-out { min-height: 64px; font-size: 26px; padding: 10px 12px; }
+    .chip { font-size: 16px; padding: 10px 14px; min-height: 46px; }
+    .screen-title { font-size: 19px; }
+    .backbtn { font-size: 16px; padding: 10px 16px; }
   }
 </style>
 </head>
@@ -227,9 +249,10 @@ const big = document.getElementById('big');
 const bigIcon = document.getElementById('big-icon');
 const bigTxt = document.getElementById('big-txt');
 let lastSpoken = '';
-function showBig(icon, text, speakText, photo) {
+function showBig(icon, text, speakText, photo, pic) {
   lastSpoken = speakText || text;
   if (photo) bigIcon.innerHTML = '<img class="face" src="' + photo + '" alt="">';
+  else if (pic) bigIcon.innerHTML = '<img class="pic" src="' + pic + '" alt="">';
   else bigIcon.textContent = icon || '';
   bigTxt.textContent = text;
   big.classList.add('show');
@@ -246,65 +269,87 @@ document.getElementById('btn-home').addEventListener('click', () => show('home')
 document.getElementById('gear').addEventListener('click', () => show('settings'));
 
 /* ================= content ================= */
+const I = n => './icons/' + n + '.png';
 const NEEDS = [
-  { em: '💧', lbl: 'Drink',      say: 'I want a drink please' },
-  { em: '🚻', lbl: 'Toilet',     say: 'I need the toilet' },
-  { em: '🔔', lbl: 'Nurse',      say: 'I need the nurse please' },
-  { em: '💊', lbl: 'Medication', say: 'I need my medication' },
-  { em: '🛏️', lbl: 'Move me',    say: 'I need to change position please' },
-  { em: '🥵', lbl: 'Too hot',    say: "I'm too hot" },
-  { em: '🥶', lbl: 'Too cold',   say: "I'm too cold" },
-  { em: '🍽️', lbl: 'Hungry',     say: "I'm hungry" },
-  { em: '😴', lbl: 'Sleep',      say: 'I want to sleep now' },
-  { em: '👄', lbl: 'Dry mouth',  say: 'My mouth is dry' },
-  { em: '👓', lbl: 'Glasses',    say: 'I want my glasses' },
-  { em: '🎵', lbl: 'Music / TV', say: "I'd like some music or TV" },
-  { em: '🧣', lbl: 'Blanket',    say: 'I want a blanket please' },
-  { em: '❓', lbl: 'Something else', say: 'I need something — please ask me yes or no questions' },
+  { em: '💧', img: I('drink'),      lbl: 'Drink',      say: 'I want a drink please' },
+  { em: '🚻', img: I('toilet'),     lbl: 'Toilet',     say: 'I need the toilet' },
+  { em: '🔔', img: I('nurse'),      lbl: 'Nurse',      say: 'I need the nurse please' },
+  { em: '😮‍💨', img: I('breathe'),  lbl: "Can't breathe well", say: "I can't breathe properly" },
+  { em: '🤢', img: I('sick'),       lbl: 'Feel sick',  say: 'I feel sick in the stomach' },
+  { em: '💊', img: I('medication'), lbl: 'Medication', say: 'I need my medication' },
+  { em: '🛏️', img: I('move'),       lbl: 'Move me',    say: 'I need to change position please' },
+  { em: '✋', img: I('stop'),       lbl: 'Stop — enough', say: "Stop please — I've had enough for now" },
+  { em: '🥵', img: I('hot'),        lbl: 'Too hot',    say: "I'm too hot" },
+  { em: '🥶', img: I('cold'),       lbl: 'Too cold',   say: "I'm too cold" },
+  { em: '🍽️', img: I('hungry'),     lbl: 'Hungry',     say: "I'm hungry" },
+  { em: '😴', img: I('sleep'),      lbl: 'Sleep',      say: "I'm tired — let me rest" },
+  { em: '👄', img: I('drymouth'),   lbl: 'Dry mouth',  say: 'My mouth is dry' },
+  { em: '👓', img: I('glasses'),    lbl: 'Glasses',    say: 'I want my glasses' },
+  { em: '🎵', img: I('tv'),         lbl: 'Music / TV', say: "I'd like some music or TV" },
+  { em: '🧣', img: I('blanket'),    lbl: 'Blanket',    say: 'I want a blanket please' },
+  { em: '❓', img: I('question'),   lbl: 'Something else', say: 'I need something — please ask me yes or no questions' },
 ];
 const FEELINGS = [
-  { em: '❤️', lbl: 'I love you',   say: 'I love you' },
-  { em: '🙏', lbl: 'Thank you',    say: 'Thank you' },
-  { em: '👍', lbl: "I'm okay",     say: "I'm okay" },
-  { em: '🧑‍🤝‍🧑', lbl: 'Stay with me', say: 'Please stay with me' },
-  { em: '🤫', lbl: 'Quiet please', say: "I'd like some quiet please" },
-  { em: '😟', lbl: "I'm scared",   say: "I'm scared" },
-  { em: '😤', lbl: 'Frustrated',   say: "I'm frustrated — give me a moment" },
-  { em: '😕', lbl: 'Confused',     say: "I'm confused" },
-  { em: '⚠️', lbl: "Something's wrong", say: 'Something is wrong' },
-  { em: '🤗', lbl: 'Hold my hand', say: 'Hold my hand' },
+  { em: '❤️', img: I('love'),       lbl: 'I love you',   say: 'I love you' },
+  { em: '🙏', img: I('thanks'),     lbl: 'Thank you',    say: 'Thank you' },
+  { em: '👍', img: I('ok'),         lbl: "I'm okay",     say: "I'm okay" },
+  { em: '🧑‍🤝‍🧑', img: I('together'), lbl: 'Stay with me', say: 'Please stay with me' },
+  { em: '🤫', img: I('quiet'),      lbl: 'Quiet please', say: "I'd like some quiet please" },
+  { em: '😟', img: I('scared'),     lbl: "I'm scared",   say: "I'm scared" },
+  { em: '😤', img: I('frustrated'), lbl: 'Frustrated',   say: "I'm frustrated — give me a moment" },
+  { em: '😕', img: I('confused'),   lbl: 'Confused',     say: "I'm confused" },
+  { em: '⚠️', img: I('wrong'),      lbl: "Something's wrong", say: 'Something is wrong' },
+  { em: '🤗', img: I('holdhand'),   lbl: 'Hold my hand', say: 'Hold my hand' },
+];
+const HEART = [
+  { em: '❤️', img: I('love'),    lbl: 'I love you',        say: 'I love you' },
+  { em: '🙏', img: I('thanks'),  lbl: 'Thank you',         say: 'Thank you for everything' },
+  { em: '🕊️', img: I('sorry'),   lbl: 'Please forgive me', say: 'Please forgive me' },
+  { em: '🤝', img: I('forgive'), lbl: 'I forgive you',     say: 'I forgive you' },
+  { em: '🥹', img: I('proud'),   lbl: "I'm proud of you",  say: 'I am so proud of you' },
+  { em: '🙂', lbl: "Don't worry",       say: "Don't worry about me" },
+  { em: '😌', img: I('peace'),   lbl: "I'm at peace",      say: "I'm at peace" },
+  { em: '💪', img: I('strong'),  lbl: "I'm not scared",    say: "I'm not scared" },
+  { em: '💕', img: I('family'),  lbl: 'Love to everyone',  say: 'Give everyone my love' },
+  { em: '🪑', img: I('together'), lbl: 'Stay with me',     say: 'Please stay with me' },
+  { em: '👋', img: I('closer'),  lbl: 'Come closer',       say: 'Come closer' },
+  { em: '🤍', lbl: 'Company — no need to talk', say: "I just want company — we don't need to talk" },
+  { em: '🤗', img: I('holdhand'), lbl: 'Hold my hand',     say: 'Hold my hand' },
+  { em: '😘', img: I('kiss'),    lbl: 'Kiss me',           say: 'Give me a kiss' },
+  { em: '👋', img: I('goodbye'), lbl: 'Goodbye',           say: 'Goodbye. I love you all.' },
 ];
 const SAYINGS = [
-  { em: '❤️', lbl: 'I love you',        say: 'I love you' },
-  { em: '💪', lbl: "I'll be okay",      say: "I'll be okay" },
-  { em: '🦁', lbl: 'I want to be strong', say: 'I want to be strong' },
+  { em: '❤️', img: I('love'),  lbl: 'I love you',        say: 'I love you' },
+  { em: '💪', img: I('ok'),    lbl: "I'll be okay",      say: "I'll be okay" },
+  { em: '🦁', img: I('strong'), lbl: 'I want to be strong', say: 'I want to be strong' },
   { em: '😌', lbl: "That's better",     say: "That's better" },
-  { em: '😤', lbl: "It's frustrating",  say: "It's frustrating" },
-  { em: '👂', lbl: 'I can understand you', say: 'I can understand you' },
-  { em: '🤫', lbl: 'Be quiet',          say: 'Be quiet' },
+  { em: '😤', img: I('frustrated'), lbl: "It's frustrating", say: "It's frustrating" },
+  { em: '👂', img: I('understand'), lbl: 'I can understand you', say: 'I can understand you' },
+  { em: '🤫', img: I('quiet'), lbl: 'Be quiet',          say: 'Be quiet' },
   { em: '🤨', lbl: 'What are you doing?', say: 'What are you doing?' },
   { em: '🤔', lbl: 'Why are you asking?', say: 'Why are you asking?' },
   { em: '💩', lbl: "That's bullshit",   say: "That's bullshit" },
   { em: '🙄', lbl: 'Fucking ridiculous', say: 'Fucking ridiculous' },
-  { em: '🥹', lbl: "I'm proud of you",  say: "I'm proud of you" },
+  { em: '🥹', img: I('proud'), lbl: "I'm proud of you",  say: "I'm proud of you" },
   { em: '✋', lbl: "Don't fuss",        say: "Don't fuss over me, I'm alright" },
-  { em: '🪑', lbl: 'Come sit with me',  say: 'Come sit with me' },
-  { em: '⏳', lbl: 'Give me a minute',  say: 'Give me a minute' },
+  { em: '🪑', img: I('sit'),   lbl: 'Come sit with me',  say: 'Come sit with me' },
+  { em: '⏳', img: I('wait'),  lbl: 'Give me a minute',  say: 'Give me a minute' },
   { em: '😉', lbl: 'I know',            say: 'I know' },
-  { em: '🎾', lbl: 'Tennis on',         say: 'Put the tennis on' },
-  { em: '⛳', lbl: 'Golf on',           say: 'Put the golf on' },
-  { em: '🏉', lbl: 'Footy on',          say: 'Put the footy on' },
-  { em: '🏆', lbl: "Who's winning?",    say: "Who's winning?" },
+  { em: '💬', img: I('talk'),  lbl: 'Tell me about your day', say: 'Tell me about your day' },
+  { em: '🎾', img: I('tennis'), lbl: 'Tennis on',        say: 'Put the tennis on' },
+  { em: '⛳', img: I('golf'),  lbl: 'Golf on',           say: 'Put the golf on' },
+  { em: '🏉', img: I('footy'), lbl: 'Footy on',          say: 'Put the footy on' },
+  { em: '🏆', img: I('win'),   lbl: "Who's winning?",    say: "Who's winning?" },
 ];
 const PAIN_PARTS = [
-  { em: '🤕', lbl: 'Head',   part: 'head' },
-  { em: '👄', lbl: 'Mouth / throat', part: 'mouth or throat' },
-  { em: '🫁', lbl: 'Chest',  part: 'chest' },
-  { em: '🫃', lbl: 'Tummy',  part: 'tummy' },
-  { em: '🔙', lbl: 'Back',   part: 'back' },
-  { em: '💪', lbl: 'Arms',   part: 'arm' },
-  { em: '🦵', lbl: 'Legs',   part: 'leg' },
-  { em: '😖', lbl: 'All over / not sure', part: null },
+  { em: '🤕', img: I('head'),     lbl: 'Head',   part: 'head' },
+  { em: '👄', img: I('throat'),   lbl: 'Mouth / throat', part: 'mouth or throat' },
+  { em: '🫁', img: I('chest'),    lbl: 'Chest',  part: 'chest' },
+  { em: '🤢', img: I('tummy'),    lbl: 'Tummy',  part: 'tummy' },
+  { em: '⬅️', img: I('backpain'), lbl: 'Back',   part: 'back' },
+  { em: '💪', img: I('arm'),      lbl: 'Arms',   part: 'arm' },
+  { em: '🦵', img: I('leg'),      lbl: 'Legs',   part: 'leg' },
+  { em: '😖', img: I('pain'),     lbl: 'All over / not sure', part: null },
 ];
 const SEVERITIES = [
   { em: '🙂', lbl: 'A little', say: 'a little bit' },
@@ -321,9 +366,14 @@ const CHOICE_PRESETS = [
 /* ================= rendering ================= */
 const screen = document.getElementById('screen');
 function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+function tileVisual(item) {
+  return item.img
+    ? '<img class="pic" src="' + item.img + '" alt="" onerror="this.outerHTML=\'<div class=&quot;em&quot;>' + item.em + '</div>\'">'
+    : '<div class="em">' + item.em + '</div>';
+}
 function tileBtn(item, cls) {
-  const b = el('<button class="tile ' + (cls || '') + '"><div class="em">' + item.em + '</div><div class="lbl">' + item.lbl + '</div></button>');
-  b.addEventListener('click', () => showBig(item.em, item.lbl, item.say));
+  const b = el('<button class="tile ' + (cls || '') + '">' + tileVisual(item) + '<div class="lbl">' + item.lbl + '</div></button>');
+  b.addEventListener('click', () => showBig(item.em, item.lbl, item.say, null, item.img));
   return b;
 }
 function navTile(em, lbl, target) {
@@ -352,15 +402,27 @@ function show(name, arg) {
 /* ---- home ---- */
 SCREENS.home = () => {
   const g = el('<div class="grid big"></div>');
-  if (S.mode === 'simple') {
+  const painItem = { em: '🤕', img: I('pain'), lbl: 'Pain' };
+  if (S.mode === 'yesno') {
+    g.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    const yes = el('<button class="tile" style="min-height:34vh;background:var(--green-bg);color:var(--green);"><div class="em">✓</div><div class="lbl" style="font-size:clamp(30px,5vw,48px);">YES</div></button>');
+    yes.addEventListener('click', () => showBig('✓', 'YES', 'Yes'));
+    const no = el('<button class="tile" style="min-height:34vh;background:var(--red-bg);color:var(--red);"><div class="em">✗</div><div class="lbl" style="font-size:clamp(30px,5vw,48px);">NO</div></button>');
+    no.addEventListener('click', () => showBig('✗', 'NO', 'No'));
+    const pain = el('<button class="tile warn" style="min-height:34vh;">' + tileVisual(painItem) + '<div class="lbl" style="font-size:clamp(30px,5vw,48px);">PAIN</div></button>');
+    pain.addEventListener('click', () => showBig('🤕', 'PAIN', "I'm in pain", null, I('pain')));
+    const need = el('<button class="tile" style="min-height:34vh;">' + tileVisual({ em: '❓', img: I('question') }) + '<div class="lbl" style="font-size:clamp(30px,5vw,48px);">I NEED SOMETHING</div></button>');
+    need.addEventListener('click', () => showBig('❓', 'I need something', 'I need something — please ask me yes or no questions', null, I('question')));
+    g.appendChild(yes); g.appendChild(no); g.appendChild(pain); g.appendChild(need);
+  } else if (S.mode === 'simple') {
     [NEEDS[0], NEEDS[1], NEEDS[2]].forEach(n => g.appendChild(tileBtn(n)));
-    const pain = el('<button class="tile warn"><div class="em">🤕</div><div class="lbl">Pain</div></button>');
-    pain.addEventListener('click', () => showBig('🤕', 'PAIN', "I'm in pain"));
+    const pain = el('<button class="tile warn">' + tileVisual(painItem) + '<div class="lbl">Pain</div></button>');
+    pain.addEventListener('click', () => showBig('🤕', 'PAIN', "I'm in pain", null, I('pain')));
     g.appendChild(pain);
-    g.appendChild(tileBtn(NEEDS[8]));
+    g.appendChild(tileBtn(NEEDS[11]));
     g.appendChild(tileBtn(FEELINGS[0]));
   } else {
-    const pain = el('<button class="tile warn"><div class="em">🤕</div><div class="lbl">Pain</div></button>');
+    const pain = el('<button class="tile warn">' + tileVisual(painItem) + '<div class="lbl">Pain</div></button>');
     pain.addEventListener('click', () => show('pain'));
     g.appendChild(pain);
     g.appendChild(tileBtn(NEEDS[0]));
@@ -368,6 +430,7 @@ SCREENS.home = () => {
     g.appendChild(tileBtn(NEEDS[2]));
     g.appendChild(navTile('🛎️', 'I need…', 'needs'));
     g.appendChild(navTile('🗣️', 'My sayings', 'sayings'));
+    g.appendChild(navTile('❤️', 'From the heart', 'heart'));
     g.appendChild(navTile('👨‍👩‍👧', 'People', 'people'));
     g.appendChild(navTile('💬', 'Feelings', 'feelings'));
     g.appendChild(navTile('🔀', 'Choices', 'choices'));
@@ -400,12 +463,36 @@ SCREENS.sayings = () => {
   screen.appendChild(g);
 };
 
+/* ---- from the heart ---- */
+SCREENS.heart = () => {
+  screen.appendChild(titleRow('From the heart', 'home'));
+  const g = el('<div class="grid"></div>');
+  HEART.forEach(h => g.appendChild(tileBtn(h)));
+  screen.appendChild(g);
+};
+
+/* ---- tips for family ---- */
+SCREENS.tips = () => {
+  screen.appendChild(titleRow('Tips for family & carers', 'settings'));
+  screen.appendChild(el(`<div style="max-width:680px;margin:0 auto;font-size:20px;line-height:1.55;color:var(--ink);-webkit-user-select:text;user-select:text;">
+    <p><b>He understands more than he can say.</b> Speak adult-to-adult, in a natural tone. Never talk over his head about him.</p>
+    <p><b>One idea at a time.</b> Short sentences, slow down, use gesture. Writing or showing a key word while you speak helps it land.</p>
+    <p><b>Give him time.</b> Wait 5–10 seconds after asking. Don't finish his sentences unless he invites it.</p>
+    <p><b>Verify.</b> When he indicates something, confirm it: "So you mean X — yes?"</p>
+    <p><b>Offer choices, not open questions.</b> The Choices screen is built for this — you type the options, he picks. Yes/no questions beat "what do you want?"</p>
+    <p><b>Watch fatigue.</b> Mornings are often his best window. Keep sessions short and stop at the first signs of tiring. Sitting together in silence counts as communication.</p>
+    <p><b>As ability changes, step down the ladder:</b> typing → picture buttons → yes/no → hand squeeze or blink. Agree the hand-squeeze yes/no signal with everyone <i>now</i>, so it's ready if needed.</p>
+    <p><b>Don't test him</b> ("what's this called?"). Every interaction should be real communication, not practice.</p>
+    <p style="color:var(--muted);font-size:16px;margin-top:24px;">Based on Supported Conversation for Adults with Aphasia (Aphasia Institute), ASHA end-of-life AAC guidance, and Ira Byock's <i>The Four Things That Matter Most</i>. Pictographic symbols © Government of Aragón, author Sergio Palao, ARASAAC (arasaac.org), CC BY-NC-SA.</p>
+  </div>`));
+};
+
 /* ---- pain: part then severity ---- */
 SCREENS.pain = () => {
   screen.appendChild(titleRow('Where does it hurt?', 'home'));
   const g = el('<div class="grid"></div>');
   PAIN_PARTS.forEach(p => {
-    const b = el('<button class="tile warn"><div class="em">' + p.em + '</div><div class="lbl">' + p.lbl + '</div></button>');
+    const b = el('<button class="tile warn">' + tileVisual(p) + '<div class="lbl">' + p.lbl + '</div></button>');
     b.addEventListener('click', () => show('painLevel', p));
     g.appendChild(b);
   });
@@ -543,14 +630,21 @@ SCREENS.settings = () => {
   const wrap = el('<div style="max-width:680px;margin:0 auto;"></div>');
 
   /* mode */
-  const modeRow = el('<div class="set-row"><h3>Screen mode</h3><label>Simple = 6 big buttons for harder days. Full = everything.</label><div></div></div>');
+  const modeRow = el('<div class="set-row"><h3>Screen mode</h3><label>Match the mode to his day: Yes/No for the hardest days, Simple for 6 big buttons, Full for everything.</label><div></div></div>');
   const modeBtns = modeRow.querySelector('div:last-child');
-  ['simple', 'full'].forEach(m => {
-    const b = el('<button class="toggle-btn' + (S.mode === m ? ' on' : '') + '">' + (m === 'simple' ? 'Simple' : 'Full') + '</button>');
+  [['yesno', 'Yes/No only'], ['simple', 'Simple'], ['full', 'Full']].forEach(([m, lbl]) => {
+    const b = el('<button class="toggle-btn' + (S.mode === m ? ' on' : '') + '">' + lbl + '</button>');
     b.addEventListener('click', () => { S.mode = m; save(); show('settings'); });
     modeBtns.appendChild(b);
   });
   wrap.appendChild(modeRow);
+
+  /* tips */
+  const tipsRow = el('<div class="set-row"><h3>Talking with him</h3><label>Short, practical tips from aphasia and palliative-care specialists.</label><div style="margin-top:10px;"></div></div>');
+  const tipsBtn = el('<button class="toggle-btn">📖 Read the tips</button>');
+  tipsBtn.addEventListener('click', () => show('tips'));
+  tipsRow.querySelector('div:last-child').appendChild(tipsBtn);
+  wrap.appendChild(tipsRow);
 
   /* voice */
   const vRow = el('<div class="set-row"><h3>Voice</h3><select id="voice-sel"></select><label>Speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div style="margin-top:10px;"></div></div>');

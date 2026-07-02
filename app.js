@@ -152,7 +152,7 @@ const NEEDS = [
 ];
 const EVERYDAY = [
   { em: '🚰', img: I('water'),   lbl: 'Water',        say: 'Can I have some water?' },
-  { em: '🍵', img: I('tea'),     lbl: 'Cup of tea',   say: "I'd like a cup of tea please" },
+  { em: '☕', img: I('coffee'),  lbl: 'Coffee',       say: "I'd like a coffee please" },
   { em: '🍽️', img: I('eat'),     lbl: 'Something to eat', say: "I'd like something to eat" },
   { em: '📺', img: I('tv'),      lbl: 'TV on',        say: 'Can you put the television on?' },
   { em: '🎵', img: I('music'),   lbl: 'Music',        say: "I'd like some music on" },

@@ -1,4 +1,4 @@
-const CACHE = 'talkboard-v9';
+const CACHE = 'talkboard-v10';
 // Precache the default voice (william); other voices are cached automatically when first used.
 const ASSETS = [
   './',
@@ -212,7 +212,8 @@ const ASSETS = [
   './audio/william/p130.mp3',
   './audio/william/p131.mp3',
   './audio/william/p132.mp3',
-  './audio/william/p133.mp3'
+  './audio/william/p133.mp3',
+  './audio/william/p134.mp3'
 ];
 
 self.addEventListener('install', e => {

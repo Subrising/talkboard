@@ -1,7 +1,8 @@
-const CACHE = 'talkboard-v4';
+const CACHE = 'talkboard-v6';
 const ASSETS = [
   './',
   './index.html',
+  './app.js',
   './manifest.webmanifest',
   './icon-180.png',
   './icon-512.png',
@@ -12,6 +13,7 @@ const ASSETS = [
   './icons/blanket.png',
   './icons/breathe.png',
   './icons/bright.png',
+  './icons/call.png',
   './icons/chest.png',
   './icons/closer.png',
   './icons/cold.png',
@@ -208,7 +210,8 @@ const ASSETS = [
   './audio/p129.mp3',
   './audio/p130.mp3',
   './audio/p131.mp3',
-  './audio/p132.mp3'
+  './audio/p132.mp3',
+  './audio/p133.mp3'
 ];
 
 self.addEventListener('install', e => {

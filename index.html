@@ -48,6 +48,7 @@
   }
   #btn-yes { flex: 3; background: var(--green-bg); color: var(--green); font-size: clamp(30px, 6vw, 52px); }
   #btn-no  { flex: 3; background: var(--red-bg);  color: var(--red);  font-size: clamp(30px, 6vw, 52px); }
+  #btn-again { flex: 1; background: var(--blue-bg); color: var(--blue); font-size: clamp(24px, 4vw, 36px); }
   #btn-home { flex: 1; background: var(--card); color: var(--muted); font-size: clamp(24px, 4vw, 36px); }
 
   /* ---------- screens ---------- */
@@ -159,6 +160,20 @@
     background: none; font-size: 24px; opacity: .35; padding: 10px;
   }
 
+  /* ---------- category colour coding ---------- */
+  .tile.c-need   { background: #fdf3dd; }
+  .tile.c-day    { background: #e0f1ef; }
+  .tile.c-sport  { background: #e5f2dd; }
+  .tile.c-words  { background: #f6ead9; }
+  .tile.c-heart  { background: #fbe7e7; }
+  .tile.c-feel   { background: #f9e6ef; }
+  .tile.c-people { background: #ece6f8; }
+
+  /* ---------- recently said ---------- */
+  .recent-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .recent-row .chip { background: var(--card); }
+  .recent-lbl { font-size: 15px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 2px 6px 6px; }
+
   /* ---------- phone-size layout ---------- */
   @media (max-width: 540px) {
     #topbar { gap: 6px; padding: 6px 6px 2px; }
@@ -185,6 +200,7 @@
 <div id="topbar">
   <button id="btn-yes">✓ YES</button>
   <button id="btn-no">✗ NO</button>
+  <button id="btn-again" title="Say that again">🔊</button>
   <button id="btn-home">🏠</button>
 </div>
 
@@ -212,7 +228,9 @@ const DEFAULTS = {
     { name: 'David',  photo: null },
     { name: 'Hester', photo: null },
     { name: 'Eryka',  photo: null },
+    { name: 'the family', photo: null },
   ],
+  recent: [],
   phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'],
 };
 let S = load();
@@ -267,6 +285,11 @@ const bigTxt = document.getElementById('big-txt');
 let lastSpoken = '';
 function showBig(icon, text, speakText, photo, pic) {
   lastSpoken = speakText || text;
+  if (text !== 'YES' && text !== 'NO') {
+    S.recent = [{ em: icon, lbl: text, say: lastSpoken, img: pic || null, photo: photo || null }]
+      .concat((S.recent || []).filter(r => r.say !== lastSpoken)).slice(0, 4);
+    save();
+  }
   if (photo) bigIcon.innerHTML = '<img class="face" src="' + photo + '" alt="">';
   else if (pic) bigIcon.innerHTML = '<img class="pic" src="' + pic + '" alt="">';
   else bigIcon.textContent = icon || '';
@@ -281,6 +304,7 @@ big.addEventListener('click', e => { if (e.target === big) big.classList.remove(
 /* ================= top bar ================= */
 document.getElementById('btn-yes').addEventListener('click', () => showBig('✓', 'YES', 'Yes'));
 document.getElementById('btn-no').addEventListener('click', () => showBig('✗', 'NO', 'No'));
+document.getElementById('btn-again').addEventListener('click', () => { if (lastSpoken) speak(lastSpoken); });
 document.getElementById('btn-home').addEventListener('click', () => show('home'));
 document.getElementById('gear').addEventListener('click', () => show('settings'));
 
@@ -288,34 +312,62 @@ document.getElementById('gear').addEventListener('click', () => show('settings')
 const I = n => './icons/' + n + '.png';
 const NEEDS = [
   { em: '💧', img: I('drink'),      lbl: 'Drink',      say: 'I want a drink please' },
-  { em: '🚻', img: I('toilet'),     lbl: 'Toilet',     say: 'I need the toilet' },
-  { em: '🔔', img: I('nurse'),      lbl: 'Nurse',      say: 'I need the nurse please' },
-  { em: '😮‍💨', img: I('breathe'),  lbl: "Can't breathe well", say: "I can't breathe properly" },
-  { em: '🤢', img: I('sick'),       lbl: 'Feel sick',  say: 'I feel sick in the stomach' },
-  { em: '💊', img: I('medication'), lbl: 'Medication', say: 'I need my medication' },
-  { em: '🛏️', img: I('move'),       lbl: 'Move me',    say: 'I need to change position please' },
+  { em: '🚻', img: I('toilet'),     lbl: 'Toilet',     say: 'I need to go to the toilet' },
+  { em: '🔔', img: I('nurse'),      lbl: 'Nurse',      say: 'Please call the nurse or doctor' },
+  { em: '🙋', img: I('help'),       lbl: 'Help',       say: 'I need some help please' },
+  { em: '😮‍💨', img: I('breathe'),  lbl: 'Breathing',  say: "I'm having trouble breathing" },
+  { em: '🤢', img: I('sick'),       lbl: 'Feel sick',  say: 'I feel sick in my stomach' },
+  { em: '💫', img: I('dizzy'),      lbl: 'Dizzy',      say: "I'm feeling dizzy" },
+  { em: '💊', img: I('medication'), lbl: 'Medication', say: 'I think I need my medication' },
+  { em: '🛏️', img: I('move'),       lbl: 'Move me',    say: "Can you help me move? I'm uncomfortable" },
+  { em: '🙇', img: I('situp'),      lbl: 'Sit me up',  say: 'Can you help me sit up?' },
   { em: '✋', img: I('stop'),       lbl: 'Stop — enough', say: "Stop please — I've had enough for now" },
   { em: '🥵', img: I('hot'),        lbl: 'Too hot',    say: "I'm too hot" },
-  { em: '🥶', img: I('cold'),       lbl: 'Too cold',   say: "I'm too cold" },
+  { em: '🥶', img: I('cold'),       lbl: 'Too cold',   say: "I'm cold" },
   { em: '🍽️', img: I('hungry'),     lbl: 'Hungry',     say: "I'm hungry" },
-  { em: '😴', img: I('sleep'),      lbl: 'Sleep',      say: "I'm tired — let me rest" },
+  { em: '😴', img: I('sleep'),      lbl: 'Rest',       say: "I'm tired. I need to rest" },
   { em: '👄', img: I('drymouth'),   lbl: 'Dry mouth',  say: 'My mouth is dry' },
-  { em: '👓', img: I('glasses'),    lbl: 'Glasses',    say: 'I want my glasses' },
-  { em: '🎵', img: I('tv'),         lbl: 'Music / TV', say: "I'd like some music or TV" },
-  { em: '🧣', img: I('blanket'),    lbl: 'Blanket',    say: 'I want a blanket please' },
+  { em: '⚠️', img: I('wrong'),      lbl: "Something's wrong", say: 'Something is wrong. Please check on me' },
   { em: '❓', img: I('question'),   lbl: 'Something else', say: 'I need something — please ask me yes or no questions' },
+];
+const EVERYDAY = [
+  { em: '🚰', img: I('water'),   lbl: 'Water',        say: 'Can I have some water?' },
+  { em: '🍵', img: I('tea'),     lbl: 'Cup of tea',   say: "I'd like a cup of tea please" },
+  { em: '🍽️', img: I('eat'),     lbl: 'Something to eat', say: "I'd like something to eat" },
+  { em: '📺', img: I('tv'),      lbl: 'TV on',        say: 'Can you put the television on?' },
+  { em: '🎵', img: I('music'),   lbl: 'Music',        say: "I'd like some music on" },
+  { em: '🔆', img: I('bright'),  lbl: 'Too bright',   say: "It's too bright in here" },
+  { em: '🔇', img: I('loud'),    lbl: 'Too loud',     say: "It's too loud" },
+  { em: '🪟', img: I('air'),     lbl: 'Fresh air',    say: 'Can you open a window for some fresh air?' },
+  { em: '👓', img: I('glasses'), lbl: 'My glasses',   say: 'Can you pass me my glasses?' },
+  { em: '📱', img: I('phone'),   lbl: 'My phone',     say: 'Can you pass me my phone?' },
+  { em: '🧻', img: I('tissue'),  lbl: 'Tissue',       say: 'Can I have a tissue?' },
+  { em: '🧣', img: I('blanket'), lbl: 'Blanket',      say: 'I want a blanket please' },
+  { em: '⏳', img: I('wait'),    lbl: 'Wait a moment', say: 'Wait a moment please' },
+  { em: '👍', img: I('ok'),      lbl: 'I feel better', say: "I'm feeling a bit better now" },
+];
+const SPORT = [
+  { em: '🎾', img: I('tennis'), lbl: 'Tennis on',   say: 'Turn the tennis on' },
+  { em: '⛳', img: I('golf'),   lbl: 'Golf on',     say: 'Put the golf on' },
+  { em: '🏉', img: I('footy'),  lbl: 'Footy on',    say: 'Put the footy on' },
+  { em: '🏆', img: I('win'),    lbl: "Who's winning?", say: "Who's winning?" },
+  { em: '👏', img: I('goodshot'), lbl: 'Good shot', say: 'Good shot' },
+  { em: '🔊', lbl: 'Turn it up',   say: 'Turn it up' },
+  { em: '🔉', lbl: 'Turn it down', say: 'Turn it down' },
 ];
 const FEELINGS = [
   { em: '❤️', img: I('love'),       lbl: 'I love you',   say: 'I love you' },
   { em: '🙏', img: I('thanks'),     lbl: 'Thank you',    say: 'Thank you' },
+  { em: '🫶', img: I('thanks'),     lbl: 'Thanks for looking after me', say: 'Thank you for looking after me' },
   { em: '👍', img: I('ok'),         lbl: "I'm okay",     say: "I'm okay" },
-  { em: '🧑‍🤝‍🧑', img: I('together'), lbl: 'Stay with me', say: 'Please stay with me' },
+  { em: '🤗', img: I('together'),   lbl: "Glad you're here", say: "I'm glad you're here" },
+  { em: '🧑‍🤝‍🧑', img: I('sit'),     lbl: 'Sit with me',  say: 'Come and sit with me' },
+  { em: '🤲', img: I('holdhand'),   lbl: 'Hold my hand', say: 'Will you hold my hand?' },
   { em: '🤫', img: I('quiet'),      lbl: 'Quiet please', say: "I'd like some quiet please" },
-  { em: '😟', img: I('scared'),     lbl: "I'm scared",   say: "I'm scared" },
+  { em: '🚪', img: I('alone'),      lbl: 'Time alone',   say: "I'd like some time on my own for a bit" },
+  { em: '😟', img: I('scared'),     lbl: "I'm scared",   say: "I'm feeling scared" },
   { em: '😤', img: I('frustrated'), lbl: 'Frustrated',   say: "I'm frustrated — give me a moment" },
   { em: '😕', img: I('confused'),   lbl: 'Confused',     say: "I'm confused" },
-  { em: '⚠️', img: I('wrong'),      lbl: "Something's wrong", say: 'Something is wrong' },
-  { em: '🤗', img: I('holdhand'),   lbl: 'Hold my hand', say: 'Hold my hand' },
 ];
 const HEART = [
   { em: '❤️', img: I('love'),    lbl: 'I love you',        say: 'I love you' },
@@ -338,24 +390,22 @@ const SAYINGS = [
   { em: '❤️', img: I('love'),  lbl: 'I love you',        say: 'I love you' },
   { em: '💪', img: I('ok'),    lbl: "I'll be okay",      say: "I'll be okay" },
   { em: '🦁', img: I('strong'), lbl: 'I want to be strong', say: 'I want to be strong' },
+  { em: '🫡', lbl: "I'm still here",    say: "I'm still here" },
   { em: '😌', lbl: "That's better",     say: "That's better" },
   { em: '😤', img: I('frustrated'), lbl: "It's frustrating", say: "It's frustrating" },
   { em: '👂', img: I('understand'), lbl: 'I can understand you', say: 'I can understand you' },
+  { em: '👂', img: I('heard'), lbl: 'I heard you',       say: 'I heard you' },
+  { em: '✋', lbl: "Leave it, I'm fine", say: "Leave it, I'm fine" },
   { em: '🤫', img: I('quiet'), lbl: 'Be quiet',          say: 'Be quiet' },
+  { em: '🛑', img: I('stop'),  lbl: 'Enough',            say: 'Enough' },
   { em: '🤨', lbl: 'What are you doing?', say: 'What are you doing?' },
   { em: '🤔', lbl: 'Why are you asking?', say: 'Why are you asking?' },
   { em: '💩', lbl: "That's bullshit",   say: "That's bullshit" },
-  { em: '🙄', lbl: 'Fucking ridiculous', say: 'Fucking ridiculous' },
+  { em: '🙄', lbl: 'Fucking ridiculous', say: "That's fucking ridiculous" },
   { em: '🥹', img: I('proud'), lbl: "I'm proud of you",  say: "I'm proud of you" },
-  { em: '✋', lbl: "Don't fuss",        say: "Don't fuss over me, I'm alright" },
-  { em: '🪑', img: I('sit'),   lbl: 'Come sit with me',  say: 'Come sit with me' },
   { em: '⏳', img: I('wait'),  lbl: 'Give me a minute',  say: 'Give me a minute' },
   { em: '😉', lbl: 'I know',            say: 'I know' },
   { em: '💬', img: I('talk'),  lbl: 'Tell me about your day', say: 'Tell me about your day' },
-  { em: '🎾', img: I('tennis'), lbl: 'Tennis on',        say: 'Put the tennis on' },
-  { em: '⛳', img: I('golf'),  lbl: 'Golf on',           say: 'Put the golf on' },
-  { em: '🏉', img: I('footy'), lbl: 'Footy on',          say: 'Put the footy on' },
-  { em: '🏆', img: I('win'),   lbl: "Who's winning?",    say: "Who's winning?" },
 ];
 const PAIN_PARTS = [
   { em: '🤕', img: I('head'),     lbl: 'Head',   part: 'head' },
@@ -365,6 +415,7 @@ const PAIN_PARTS = [
   { em: '⬅️', img: I('backpain'), lbl: 'Back',   part: 'back' },
   { em: '💪', img: I('arm'),      lbl: 'Arms',   part: 'arm' },
   { em: '🦵', img: I('leg'),      lbl: 'Legs',   part: 'leg' },
+  { em: '🧣', img: I('neck'),     lbl: 'Neck',   part: 'neck' },
   { em: '😖', img: I('pain'),     lbl: 'All over / not sure', part: null },
 ];
 const SEVERITIES = [
@@ -392,8 +443,8 @@ function tileBtn(item, cls) {
   b.addEventListener('click', () => showBig(item.em, item.lbl, item.say, null, item.img));
   return b;
 }
-function navTile(em, lbl, target) {
-  const b = el('<button class="tile nav"><div class="em">' + em + '</div><div class="lbl">' + lbl + '</div></button>');
+function navTile(em, lbl, target, cls) {
+  const b = el('<button class="tile ' + (cls || 'nav') + '"><div class="em">' + em + '</div><div class="lbl">' + lbl + '</div></button>');
   b.addEventListener('click', () => show(target));
   return b;
 }
@@ -438,17 +489,29 @@ SCREENS.home = () => {
     g.appendChild(tileBtn(NEEDS[11]));
     g.appendChild(tileBtn(FEELINGS[0]));
   } else {
+    if (S.recent && S.recent.length) {
+      screen.appendChild(el('<div class="recent-lbl">Recently said</div>'));
+      const rr = el('<div class="recent-row"></div>');
+      S.recent.forEach(r => {
+        const c = el('<button class="chip">' + escapeHtml(r.lbl) + '</button>');
+        c.addEventListener('click', () => showBig(r.em, r.lbl, r.say, r.photo, r.img));
+        rr.appendChild(c);
+      });
+      screen.appendChild(rr);
+    }
     const pain = el('<button class="tile warn">' + tileVisual(painItem) + '<div class="lbl">Pain</div></button>');
     pain.addEventListener('click', () => show('pain'));
     g.appendChild(pain);
-    g.appendChild(tileBtn(NEEDS[0]));
-    g.appendChild(tileBtn(NEEDS[1]));
-    g.appendChild(tileBtn(NEEDS[2]));
-    g.appendChild(navTile('🛎️', 'I need…', 'needs'));
-    g.appendChild(navTile('🗣️', 'My sayings', 'sayings'));
-    g.appendChild(navTile('❤️', 'From the heart', 'heart'));
-    g.appendChild(navTile('👨‍👩‍👧', 'People', 'people'));
-    g.appendChild(navTile('💬', 'Feelings', 'feelings'));
+    g.appendChild(tileBtn(NEEDS[0], 'c-need'));
+    g.appendChild(tileBtn(NEEDS[1], 'c-need'));
+    g.appendChild(tileBtn(NEEDS[2], 'c-need'));
+    g.appendChild(navTile('🛎️', 'I need…', 'needs', 'c-need'));
+    g.appendChild(navTile('🏠', 'Everyday', 'everyday', 'c-day'));
+    g.appendChild(navTile('🎾', 'Sport / TV', 'sport', 'c-sport'));
+    g.appendChild(navTile('🗣️', 'My sayings', 'sayings', 'c-words'));
+    g.appendChild(navTile('❤️', 'From the heart', 'heart', 'c-heart'));
+    g.appendChild(navTile('💬', 'Feelings', 'feelings', 'c-feel'));
+    g.appendChild(navTile('👨‍👩‍👧', 'People', 'people', 'c-people'));
     g.appendChild(navTile('🔀', 'Choices', 'choices'));
     g.appendChild(navTile('⌨️', 'Type', 'talk'));
   }
@@ -459,7 +522,23 @@ SCREENS.home = () => {
 SCREENS.needs = () => {
   screen.appendChild(titleRow('I need…', 'home'));
   const g = el('<div class="grid"></div>');
-  NEEDS.forEach(n => g.appendChild(tileBtn(n)));
+  NEEDS.forEach(n => g.appendChild(tileBtn(n, 'c-need')));
+  screen.appendChild(g);
+};
+
+/* ---- everyday ---- */
+SCREENS.everyday = () => {
+  screen.appendChild(titleRow('Everyday', 'home'));
+  const g = el('<div class="grid"></div>');
+  EVERYDAY.forEach(n => g.appendChild(tileBtn(n, 'c-day')));
+  screen.appendChild(g);
+};
+
+/* ---- sport / tv ---- */
+SCREENS.sport = () => {
+  screen.appendChild(titleRow('Sport / TV', 'home'));
+  const g = el('<div class="grid"></div>');
+  SPORT.forEach(n => g.appendChild(tileBtn(n, 'c-sport')));
   screen.appendChild(g);
 };
 
@@ -467,7 +546,7 @@ SCREENS.needs = () => {
 SCREENS.feelings = () => {
   screen.appendChild(titleRow('Feelings', 'home'));
   const g = el('<div class="grid"></div>');
-  FEELINGS.forEach(f => g.appendChild(tileBtn(f)));
+  FEELINGS.forEach(f => g.appendChild(tileBtn(f, 'c-feel')));
   screen.appendChild(g);
 };
 
@@ -475,7 +554,7 @@ SCREENS.feelings = () => {
 SCREENS.sayings = () => {
   screen.appendChild(titleRow('My sayings', 'home'));
   const g = el('<div class="grid"></div>');
-  SAYINGS.forEach(s => g.appendChild(tileBtn(s)));
+  SAYINGS.forEach(s => g.appendChild(tileBtn(s, 'c-words')));
   screen.appendChild(g);
 };
 
@@ -483,7 +562,7 @@ SCREENS.sayings = () => {
 SCREENS.heart = () => {
   screen.appendChild(titleRow('From the heart', 'home'));
   const g = el('<div class="grid"></div>');
-  HEART.forEach(h => g.appendChild(tileBtn(h)));
+  HEART.forEach(h => g.appendChild(tileBtn(h, 'c-heart')));
   screen.appendChild(g);
 };
 
@@ -515,6 +594,7 @@ SCREENS.pain = () => {
   screen.appendChild(g);
 };
 SCREENS.painLevel = (part) => {
+  speak(part.part ? 'My ' + part.part + ' hurts.' : "I'm in pain.");
   screen.appendChild(titleRow('How bad is it?', 'pain'));
   const g = el('<div class="grid big"></div>');
   SEVERITIES.forEach(sv => {
@@ -538,8 +618,8 @@ SCREENS.people = () => {
   }
   S.people.forEach(p => {
     const inner = p.photo ? '<img class="face" src="' + p.photo + '" alt="">' : '<div class="em">🙂</div>';
-    const b = el('<button class="tile">' + inner + '<div class="lbl">' + escapeHtml(p.name) + '</div></button>');
-    b.addEventListener('click', () => showBig(null, p.name, 'I want ' + p.name + ' here', p.photo));
+    const b = el('<button class="tile c-people">' + inner + '<div class="lbl">' + escapeHtml(p.name) + '</div></button>');
+    b.addEventListener('click', () => showBig(null, p.name, 'I want to see ' + p.name + '.', p.photo));
     g.appendChild(b);
   });
   screen.appendChild(g);

@@ -18,6 +18,7 @@ const DEFAULTS = {
   btnSize: 'normal',
   choiceSets: [],
   recVoice: 'william',
+  theme: 'auto',
   phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'],
 };
 let S = load();
@@ -645,6 +646,16 @@ SCREENS.settings = () => {
   });
   wrap.appendChild(modeRow);
 
+  /* appearance */
+  const thRow = el('<div class="set-row"><h3>Appearance</h3><label>Auto follows the device\'s light/dark setting.</label><div></div></div>');
+  const thBtns = thRow.querySelector('div:last-child');
+  [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].forEach(([k, lbl]) => {
+    const b = el('<button class="toggle-btn' + (S.theme === k ? ' on' : '') + '">' + lbl + '</button>');
+    b.addEventListener('click', () => { S.theme = k; save(); applyTheme(); show('settings'); });
+    thBtns.appendChild(b);
+  });
+  wrap.appendChild(thRow);
+
   /* button size */
   const sizeRow = el('<div class="set-row"><h3>Button size</h3><label>Bigger buttons are easier to hit but fit fewer per screen.</label><div></div></div>');
   const sizeBtns = sizeRow.querySelector('div:last-child');
@@ -830,6 +841,12 @@ function applyBtnSize() {
   document.documentElement.style.setProperty('--tilemin', BTN_SIZES[S.btnSize] || BTN_SIZES.normal);
 }
 applyBtnSize();
+
+function applyTheme() {
+  document.documentElement.classList.toggle('force-dark', S.theme === 'dark');
+  document.documentElement.classList.toggle('force-light', S.theme === 'light');
+}
+applyTheme();
 
 /* Keep the screen awake while the board is open, so he never faces a lock screen. */
 let wakeLock = null;

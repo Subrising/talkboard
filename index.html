@@ -28,33 +28,6 @@
     --radius: 22px;
     --shadow: 0 2px 8px rgba(26,34,51,.10);
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #14161b;
-      --card: #232733;
-      --ink: #edeff4;
-      --muted: #a6adbd;
-      --green: #86dda0;
-      --green-bg: #1d3a28;
-      --red: #ff9d95;
-      --red-bg: #472326;
-      --blue: #8ab4f8;
-      --blue-bg: #1f2c45;
-      --amber-bg: #40351c;
-      --shadow: 0 2px 8px rgba(0,0,0,.35);
-    }
-    .tile.c-need   { background: #3b331f; }
-    .tile.c-day    { background: #1d3331; }
-    .tile.c-sport  { background: #253420; }
-    .tile.c-words  { background: #3a2e1e; }
-    .tile.c-heart  { background: #402426; }
-    .tile.c-feel   { background: #3a2333; }
-    .tile.c-people { background: #2c2745; }
-    .tile img.pic { background: #fff; border-radius: 14px; padding: 4px; }
-    .choice-input { border-color: #3a3f4d; background: var(--card); color: var(--ink); }
-    .person-row { border-bottom-color: #343947; }
-    .tile img.face { border-color: #3a3f4d; }
-  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   html, body { height: 100%; margin: 0; }
   body {
@@ -234,6 +207,43 @@
     .screen-title { font-size: 19px; }
     .backbtn { font-size: 16px; padding: 10px 16px; }
   }
+  /* dark theme: applies on system dark unless forced light, or when forced dark */
+  @media (prefers-color-scheme: dark) {
+  html:not(.force-light) {
+      --bg: #14161b; --card: #232733; --ink: #edeff4; --muted: #a6adbd;
+      --green: #86dda0; --green-bg: #1d3a28; --red: #ff9d95; --red-bg: #472326;
+      --blue: #8ab4f8; --blue-bg: #1f2c45; --amber-bg: #40351c;
+      --shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+    html:not(.force-light) .tile.c-need { background: #3b331f; }
+    html:not(.force-light) .tile.c-day { background: #1d3331; }
+    html:not(.force-light) .tile.c-sport { background: #253420; }
+    html:not(.force-light) .tile.c-words { background: #3a2e1e; }
+    html:not(.force-light) .tile.c-heart { background: #402426; }
+    html:not(.force-light) .tile.c-feel { background: #3a2333; }
+    html:not(.force-light) .tile.c-people { background: #2c2745; }
+    html:not(.force-light) .tile img.pic { background: #fff; border-radius: 14px; padding: 4px; }
+    html:not(.force-light) .choice-input { border-color: #3a3f4d; background: var(--card); color: var(--ink); }
+    html:not(.force-light) .person-row { border-bottom-color: #343947; }
+    html:not(.force-light) .tile img.face { border-color: #3a3f4d; }
+  }
+  html.force-dark {
+    --bg: #14161b; --card: #232733; --ink: #edeff4; --muted: #a6adbd;
+    --green: #86dda0; --green-bg: #1d3a28; --red: #ff9d95; --red-bg: #472326;
+    --blue: #8ab4f8; --blue-bg: #1f2c45; --amber-bg: #40351c;
+    --shadow: 0 2px 8px rgba(0,0,0,.35);
+  }
+  html.force-dark .tile.c-need { background: #3b331f; }
+  html.force-dark .tile.c-day { background: #1d3331; }
+  html.force-dark .tile.c-sport { background: #253420; }
+  html.force-dark .tile.c-words { background: #3a2e1e; }
+  html.force-dark .tile.c-heart { background: #402426; }
+  html.force-dark .tile.c-feel { background: #3a2333; }
+  html.force-dark .tile.c-people { background: #2c2745; }
+  html.force-dark .tile img.pic { background: #fff; border-radius: 14px; padding: 4px; }
+  html.force-dark .choice-input { border-color: #3a3f4d; background: var(--card); color: var(--ink); }
+  html.force-dark .person-row { border-bottom-color: #343947; }
+  html.force-dark .tile img.face { border-color: #3a3f4d; }
 </style>
 </head>
 <body>

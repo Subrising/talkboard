@@ -1,4 +1,4 @@
-const CACHE = 'talkboard-v7';
+const CACHE = 'talkboard-v8';
 // Precache the default voice (william); other voices are cached automatically when first used.
 const ASSETS = [
   './',
@@ -226,11 +226,15 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Network-first for navigation (so updates arrive), cache fallback for offline.
+// Network-first (so updates arrive), cache fallback for offline.
+// App-shell files bypass the HTTP cache so a new deploy is picked up immediately;
+// static assets (icons/audio) may revalidate normally.
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const shell = e.request.mode === 'navigate' ||
+    /(?:index\.html|app\.js|map\.json|manifest\.webmanifest)$/.test(new URL(e.request.url).pathname);
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, shell ? { cache: 'no-cache' } : undefined)
       .then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));

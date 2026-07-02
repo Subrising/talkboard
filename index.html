@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Talk">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="icon" href="./icon-180.png">
+<title>Talk Board</title>
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --card: #ffffff;
+    --ink: #1a2233;
+    --muted: #5a6478;
+    --green: #1e7d3c;
+    --green-bg: #d9f2e0;
+    --red: #b3261e;
+    --red-bg: #fde3e1;
+    --blue: #1a56a8;
+    --blue-bg: #e2ecfa;
+    --amber-bg: #fdf0d5;
+    --radius: 22px;
+    --shadow: 0 2px 8px rgba(26,34,51,.10);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink);
+    display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    -webkit-user-select: none; user-select: none;
+    overscroll-behavior: none;
+  }
+  button { font-family: inherit; color: inherit; border: none; cursor: pointer; }
+  button:active { transform: scale(.97); filter: brightness(.95); }
+
+  /* ---------- persistent top bar: YES / NO / HOME ---------- */
+  #topbar { display: flex; gap: 10px; padding: 10px 10px 4px; }
+  #topbar button {
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    font-weight: 800; min-height: 88px;
+  }
+  #btn-yes { flex: 3; background: var(--green-bg); color: var(--green); font-size: clamp(30px, 6vw, 52px); }
+  #btn-no  { flex: 3; background: var(--red-bg);  color: var(--red);  font-size: clamp(30px, 6vw, 52px); }
+  #btn-home { flex: 1; background: var(--card); color: var(--muted); font-size: clamp(24px, 4vw, 36px); }
+
+  /* ---------- screens ---------- */
+  #screen { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; }
+  .screen-title {
+    font-size: clamp(22px, 3.5vw, 30px); font-weight: 700; color: var(--muted);
+    margin: 4px 6px 12px; display: flex; align-items: center; gap: 12px;
+  }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .grid.big { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .tile {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    min-height: 140px; padding: 14px 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    text-align: center;
+  }
+  .grid.big .tile { min-height: 170px; }
+  .tile .em { font-size: clamp(44px, 7vw, 64px); line-height: 1; }
+  .tile .lbl { font-size: clamp(22px, 3.2vw, 30px); font-weight: 700; line-height: 1.15; }
+  .tile.nav { background: var(--blue-bg); color: var(--blue); }
+  .tile.warn { background: var(--amber-bg); }
+  .tile img.face {
+    width: clamp(72px, 11vw, 110px); height: clamp(72px, 11vw, 110px);
+    border-radius: 50%; object-fit: cover; border: 3px solid #e7e2d8;
+  }
+  .backbtn {
+    background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
+    font-size: clamp(18px, 2.6vw, 24px); font-weight: 700; color: var(--muted);
+    padding: 12px 22px;
+  }
+
+  /* ---------- big display overlay ---------- */
+  #big {
+    position: fixed; inset: 0; z-index: 50; display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    background: var(--ink); color: #fff; text-align: center; padding: 4vw; gap: 3vh;
+  }
+  #big.show { display: flex; }
+  #big .em { font-size: clamp(70px, 16vw, 180px); line-height: 1; }
+  #big img.face { width: clamp(140px, 24vw, 260px); height: clamp(140px, 24vw, 260px); border-radius: 50%; object-fit: cover; border: 5px solid #fff; }
+  #big .txt { font-size: clamp(44px, 9vw, 120px); font-weight: 800; line-height: 1.1; }
+  #big .row { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  #big button {
+    border-radius: var(--radius); font-size: clamp(24px, 4vw, 36px); font-weight: 700;
+    padding: 18px 34px; min-height: 80px;
+  }
+  #big-again { background: #ffffff22; color: #fff; border: 2px solid #ffffff66; }
+  #big-close { background: #fff; color: var(--ink); }
+
+  /* ---------- talk (keyboard) ---------- */
+  #talk-out {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    min-height: 90px; padding: 14px 18px; margin-bottom: 10px;
+    font-size: clamp(30px, 5vw, 46px); font-weight: 700; line-height: 1.2;
+    word-break: break-word;
+  }
+  #talk-out .cursor { color: var(--blue); animation: blink 1s infinite; font-weight: 400; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .kb { display: flex; flex-direction: column; gap: 8px; }
+  .kb-row { display: flex; gap: 8px; justify-content: center; }
+  .key {
+    flex: 1; max-width: 110px; min-height: 70px;
+    background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
+    font-size: clamp(24px, 3.6vw, 34px); font-weight: 700;
+  }
+  .key.wide { max-width: none; flex: 3; }
+  .key.action { background: var(--blue-bg); color: var(--blue); font-size: clamp(20px, 3vw, 28px); }
+  .key.speak { background: var(--green-bg); color: var(--green); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chip {
+    background: var(--card); border-radius: 999px; box-shadow: var(--shadow);
+    font-size: clamp(18px, 2.6vw, 24px); font-weight: 600; padding: 12px 20px; min-height: 54px;
+  }
+  .chip.save { background: var(--amber-bg); }
+
+  /* ---------- choices setup ---------- */
+  .choice-input {
+    width: 100%; font-size: clamp(22px, 3.2vw, 28px); padding: 14px 16px;
+    border-radius: 14px; border: 2px solid #ddd6c8; margin-bottom: 10px;
+    font-family: inherit; -webkit-user-select: text; user-select: text;
+  }
+  .primary-btn {
+    width: 100%; background: var(--blue); color: #fff; border-radius: var(--radius);
+    font-size: clamp(24px, 3.6vw, 32px); font-weight: 700; min-height: 80px; margin-top: 6px;
+  }
+
+  /* ---------- settings ---------- */
+  .set-row {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 16px 18px; margin-bottom: 12px;
+  }
+  .set-row h3 { margin: 0 0 10px; font-size: 22px; }
+  .set-row label { font-size: 18px; color: var(--muted); }
+  .set-row select, .set-row input[type=range] { width: 100%; font-size: 20px; padding: 8px; margin-top: 6px; }
+  .toggle-btn {
+    font-size: 20px; font-weight: 700; padding: 14px 22px; border-radius: 14px;
+    background: var(--blue-bg); color: var(--blue); margin-right: 8px; margin-top: 4px; min-height: 60px;
+  }
+  .toggle-btn.on { background: var(--blue); color: #fff; }
+  .person-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; border-bottom: 1px solid #eee7da; }
+  .person-row img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; }
+  .person-row .nm { flex: 1; font-size: 22px; font-weight: 700; }
+  .person-row .rm { background: var(--red-bg); color: var(--red); border-radius: 12px; padding: 10px 16px; font-size: 18px; font-weight: 700; min-height: 50px; }
+
+  #gear {
+    position: fixed; right: 12px; bottom: 10px; z-index: 10;
+    background: none; font-size: 24px; opacity: .35; padding: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <button id="btn-yes">✓ YES</button>
+  <button id="btn-no">✗ NO</button>
+  <button id="btn-home">🏠</button>
+</div>
+
+<div id="screen"></div>
+
+<button id="gear">⚙️</button>
+
+<div id="big">
+  <div id="big-icon" class="em"></div>
+  <div id="big-txt" class="txt"></div>
+  <div class="row">
+    <button id="big-again">🔊 Say again</button>
+    <button id="big-close">Back</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ================= state ================= */
+const DEFAULTS = { mode: 'full', rate: 0.9, voiceURI: null, people: [], phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'] };
+let S = load();
+function load() {
+  try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('talkboard-v1') || '{}')); }
+  catch (e) { return Object.assign({}, DEFAULTS); }
+}
+function save() { localStorage.setItem('talkboard-v1', JSON.stringify(S)); }
+
+/* ================= speech ================= */
+let voices = [];
+function loadVoices() { voices = speechSynthesis.getVoices(); }
+loadVoices();
+if (typeof speechSynthesis !== 'undefined') speechSynthesis.onvoiceschanged = loadVoices;
+
+function pickVoice() {
+  if (S.voiceURI) { const v = voices.find(v => v.voiceURI === S.voiceURI); if (v) return v; }
+  return voices.find(v => v.lang === 'en-AU') ||
+         voices.find(v => v.lang && v.lang.startsWith('en-GB')) ||
+         voices.find(v => v.lang && v.lang.startsWith('en')) || null;
+}
+function speak(text) {
+  if (typeof speechSynthesis === 'undefined') return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const v = pickVoice();
+  if (v) u.voice = v;
+  u.rate = S.rate;
+  speechSynthesis.speak(u);
+}
+
+/* ================= big display ================= */
+const big = document.getElementById('big');
+const bigIcon = document.getElementById('big-icon');
+const bigTxt = document.getElementById('big-txt');
+let lastSpoken = '';
+function showBig(icon, text, speakText, photo) {
+  lastSpoken = speakText || text;
+  if (photo) bigIcon.innerHTML = '<img class="face" src="' + photo + '" alt="">';
+  else bigIcon.textContent = icon || '';
+  bigTxt.textContent = text;
+  big.classList.add('show');
+  speak(lastSpoken);
+}
+document.getElementById('big-again').addEventListener('click', e => { e.stopPropagation(); speak(lastSpoken); });
+document.getElementById('big-close').addEventListener('click', () => big.classList.remove('show'));
+big.addEventListener('click', e => { if (e.target === big) big.classList.remove('show'); });
+
+/* ================= top bar ================= */
+document.getElementById('btn-yes').addEventListener('click', () => showBig('✓', 'YES', 'Yes'));
+document.getElementById('btn-no').addEventListener('click', () => showBig('✗', 'NO', 'No'));
+document.getElementById('btn-home').addEventListener('click', () => show('home'));
+document.getElementById('gear').addEventListener('click', () => show('settings'));
+
+/* ================= content ================= */
+const NEEDS = [
+  { em: '💧', lbl: 'Drink',      say: 'I want a drink please' },
+  { em: '🚻', lbl: 'Toilet',     say: 'I need the toilet' },
+  { em: '🔔', lbl: 'Nurse',      say: 'I need the nurse please' },
+  { em: '💊', lbl: 'Medication', say: 'I need my medication' },
+  { em: '🛏️', lbl: 'Move me',    say: 'I need to change position please' },
+  { em: '🥵', lbl: 'Too hot',    say: "I'm too hot" },
+  { em: '🥶', lbl: 'Too cold',   say: "I'm too cold" },
+  { em: '🍽️', lbl: 'Hungry',     say: "I'm hungry" },
+  { em: '😴', lbl: 'Sleep',      say: 'I want to sleep now' },
+  { em: '👄', lbl: 'Dry mouth',  say: 'My mouth is dry' },
+  { em: '👓', lbl: 'Glasses',    say: 'I want my glasses' },
+  { em: '🎵', lbl: 'Music / TV', say: "I'd like some music or TV" },
+  { em: '🧣', lbl: 'Blanket',    say: 'I want a blanket please' },
+  { em: '❓', lbl: 'Something else', say: 'I need something — please ask me yes or no questions' },
+];
+const FEELINGS = [
+  { em: '❤️', lbl: 'I love you',   say: 'I love you' },
+  { em: '🙏', lbl: 'Thank you',    say: 'Thank you' },
+  { em: '👍', lbl: "I'm okay",     say: "I'm okay" },
+  { em: '🧑‍🤝‍🧑', lbl: 'Stay with me', say: 'Please stay with me' },
+  { em: '🤫', lbl: 'Quiet please', say: "I'd like some quiet please" },
+  { em: '😟', lbl: "I'm scared",   say: "I'm scared" },
+  { em: '😤', lbl: 'Frustrated',   say: "I'm frustrated — give me a moment" },
+  { em: '😕', lbl: 'Confused',     say: "I'm confused" },
+  { em: '⚠️', lbl: "Something's wrong", say: 'Something is wrong' },
+  { em: '🤗', lbl: 'Hold my hand', say: 'Hold my hand' },
+];
+const PAIN_PARTS = [
+  { em: '🤕', lbl: 'Head',   part: 'head' },
+  { em: '👄', lbl: 'Mouth / throat', part: 'mouth or throat' },
+  { em: '🫁', lbl: 'Chest',  part: 'chest' },
+  { em: '🫃', lbl: 'Tummy',  part: 'tummy' },
+  { em: '🔙', lbl: 'Back',   part: 'back' },
+  { em: '💪', lbl: 'Arms',   part: 'arm' },
+  { em: '🦵', lbl: 'Legs',   part: 'leg' },
+  { em: '😖', lbl: 'All over / not sure', part: null },
+];
+const SEVERITIES = [
+  { em: '🙂', lbl: 'A little', say: 'a little bit' },
+  { em: '😣', lbl: 'Bad',      say: 'quite bad' },
+  { em: '😖', lbl: 'Very bad', say: 'very bad' },
+];
+const CHOICE_PRESETS = [
+  ['Now', 'Later'],
+  ['Water', 'Tea'],
+  ['More', "That's enough"],
+  ['This one', 'That one'],
+];
+
+/* ================= rendering ================= */
+const screen = document.getElementById('screen');
+function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+function tileBtn(item, cls) {
+  const b = el('<button class="tile ' + (cls || '') + '"><div class="em">' + item.em + '</div><div class="lbl">' + item.lbl + '</div></button>');
+  b.addEventListener('click', () => showBig(item.em, item.lbl, item.say));
+  return b;
+}
+function navTile(em, lbl, target) {
+  const b = el('<button class="tile nav"><div class="em">' + em + '</div><div class="lbl">' + lbl + '</div></button>');
+  b.addEventListener('click', () => show(target));
+  return b;
+}
+function titleRow(text, backTo) {
+  const d = el('<div class="screen-title"></div>');
+  if (backTo) {
+    const back = el('<button class="backbtn">‹ Back</button>');
+    back.addEventListener('click', () => show(backTo));
+    d.appendChild(back);
+  }
+  d.appendChild(el('<span>' + text + '</span>'));
+  return d;
+}
+
+const SCREENS = {};
+function show(name, arg) {
+  screen.innerHTML = '';
+  screen.scrollTop = 0;
+  SCREENS[name](arg);
+}
+
+/* ---- home ---- */
+SCREENS.home = () => {
+  const g = el('<div class="grid big"></div>');
+  if (S.mode === 'simple') {
+    [NEEDS[0], NEEDS[1], NEEDS[2]].forEach(n => g.appendChild(tileBtn(n)));
+    const pain = el('<button class="tile warn"><div class="em">🤕</div><div class="lbl">Pain</div></button>');
+    pain.addEventListener('click', () => showBig('🤕', 'PAIN', "I'm in pain"));
+    g.appendChild(pain);
+    g.appendChild(tileBtn(NEEDS[8]));
+    g.appendChild(tileBtn(FEELINGS[0]));
+  } else {
+    const pain = el('<button class="tile warn"><div class="em">🤕</div><div class="lbl">Pain</div></button>');
+    pain.addEventListener('click', () => show('pain'));
+    g.appendChild(pain);
+    g.appendChild(tileBtn(NEEDS[0]));
+    g.appendChild(tileBtn(NEEDS[1]));
+    g.appendChild(tileBtn(NEEDS[2]));
+    g.appendChild(navTile('🛎️', 'I need…', 'needs'));
+    g.appendChild(navTile('👨‍👩‍👧', 'People', 'people'));
+    g.appendChild(navTile('💬', 'Feelings', 'feelings'));
+    g.appendChild(navTile('🔀', 'Choices', 'choices'));
+    g.appendChild(navTile('⌨️', 'Type', 'talk'));
+  }
+  screen.appendChild(g);
+};
+
+/* ---- needs ---- */
+SCREENS.needs = () => {
+  screen.appendChild(titleRow('I need…', 'home'));
+  const g = el('<div class="grid"></div>');
+  NEEDS.forEach(n => g.appendChild(tileBtn(n)));
+  screen.appendChild(g);
+};
+
+/* ---- feelings ---- */
+SCREENS.feelings = () => {
+  screen.appendChild(titleRow('Feelings', 'home'));
+  const g = el('<div class="grid"></div>');
+  FEELINGS.forEach(f => g.appendChild(tileBtn(f)));
+  screen.appendChild(g);
+};
+
+/* ---- pain: part then severity ---- */
+SCREENS.pain = () => {
+  screen.appendChild(titleRow('Where does it hurt?', 'home'));
+  const g = el('<div class="grid"></div>');
+  PAIN_PARTS.forEach(p => {
+    const b = el('<button class="tile warn"><div class="em">' + p.em + '</div><div class="lbl">' + p.lbl + '</div></button>');
+    b.addEventListener('click', () => show('painLevel', p));
+    g.appendChild(b);
+  });
+  screen.appendChild(g);
+};
+SCREENS.painLevel = (part) => {
+  screen.appendChild(titleRow('How bad is it?', 'pain'));
+  const g = el('<div class="grid big"></div>');
+  SEVERITIES.forEach(sv => {
+    const b = el('<button class="tile warn"><div class="em">' + sv.em + '</div><div class="lbl">' + sv.lbl + '</div></button>');
+    b.addEventListener('click', () => {
+      const where = part.part ? 'My ' + part.part + ' hurts. ' : "I'm in pain. ";
+      const label = (part.part ? part.lbl + ' pain' : 'Pain') + ' — ' + sv.lbl.toLowerCase();
+      showBig(sv.em, label, where + "It's " + sv.say + '.');
+    });
+    g.appendChild(b);
+  });
+  screen.appendChild(g);
+};
+
+/* ---- people ---- */
+SCREENS.people = () => {
+  screen.appendChild(titleRow('People', 'home'));
+  const g = el('<div class="grid"></div>');
+  if (!S.people.length) {
+    screen.appendChild(el('<div style="font-size:22px;color:var(--muted);padding:20px 8px;">No people added yet — open ⚙️ Settings (bottom right) to add family photos and names.</div>'));
+  }
+  S.people.forEach(p => {
+    const inner = p.photo ? '<img class="face" src="' + p.photo + '" alt="">' : '<div class="em">🙂</div>';
+    const b = el('<button class="tile">' + inner + '<div class="lbl">' + escapeHtml(p.name) + '</div></button>');
+    b.addEventListener('click', () => showBig(null, p.name, 'I want ' + p.name + ' here', p.photo));
+    g.appendChild(b);
+  });
+  screen.appendChild(g);
+};
+
+/* ---- choices (caregiver sets up, he picks) ---- */
+SCREENS.choices = () => {
+  screen.appendChild(titleRow('Set up a choice (family/carer)', 'home'));
+  const wrap = el('<div style="max-width:640px;margin:0 auto;"></div>');
+  wrap.appendChild(el('<div style="font-size:19px;color:var(--muted);margin-bottom:12px;">Type 2–4 options, tap <b>Show him the choices</b>, then hand over the screen.</div>'));
+  const inputs = [];
+  for (let i = 0; i < 4; i++) {
+    const inp = el('<input class="choice-input" placeholder="Option ' + (i + 1) + (i < 2 ? '' : ' (optional)') + '">');
+    inputs.push(inp); wrap.appendChild(inp);
+  }
+  const presetRow = el('<div class="chips"></div>');
+  CHOICE_PRESETS.forEach(ps => {
+    const c = el('<button class="chip">' + ps.join(' / ') + '</button>');
+    c.addEventListener('click', () => { inputs.forEach((inp, i) => inp.value = ps[i] || ''); });
+    presetRow.appendChild(c);
+  });
+  wrap.appendChild(presetRow);
+  const go = el('<button class="primary-btn">Show him the choices ›</button>');
+  go.addEventListener('click', () => {
+    const opts = inputs.map(i => i.value.trim()).filter(Boolean);
+    if (opts.length >= 2) show('choicesShow', opts);
+  });
+  wrap.appendChild(go);
+  screen.appendChild(wrap);
+};
+SCREENS.choicesShow = (opts) => {
+  screen.appendChild(titleRow('Tap what you want', 'choices'));
+  const g = el('<div class="grid big" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));"></div>');
+  opts.forEach(o => {
+    const b = el('<button class="tile" style="min-height:200px;"><div class="lbl" style="font-size:clamp(30px,4.5vw,44px);">' + escapeHtml(o) + '</div></button>');
+    b.addEventListener('click', () => showBig('👉', o, o));
+    g.appendChild(b);
+  });
+  const none = el('<button class="tile warn" style="min-height:200px;"><div class="em">🚫</div><div class="lbl">None of these</div></button>');
+  none.addEventListener('click', () => showBig('🚫', 'None of these', 'None of these, please ask me something else'));
+  g.appendChild(none);
+  screen.appendChild(g);
+};
+
+/* ---- talk / type ---- */
+let talkText = '';
+SCREENS.talk = () => {
+  screen.appendChild(titleRow('Type', 'home'));
+
+  const chips = el('<div class="chips"></div>');
+  S.phrases.forEach(ph => {
+    const c = el('<button class="chip">' + escapeHtml(ph) + '</button>');
+    c.addEventListener('click', () => showBig('💬', ph, ph));
+    chips.appendChild(c);
+  });
+  screen.appendChild(chips);
+
+  const out = el('<div id="talk-out"></div>');
+  screen.appendChild(out);
+  function renderOut() {
+    out.innerHTML = escapeHtml(talkText) + '<span class="cursor">|</span>';
+  }
+  renderOut();
+
+  const kb = el('<div class="kb"></div>');
+  const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+  rows.forEach((row, ri) => {
+    const r = el('<div class="kb-row"></div>');
+    if (ri === 2) {
+      const del = el('<button class="key action">⌫</button>');
+      del.addEventListener('click', () => { talkText = talkText.slice(0, -1); renderOut(); });
+      r.appendChild(del);
+    }
+    row.split('').forEach(ch => {
+      const k = el('<button class="key">' + ch + '</button>');
+      k.addEventListener('click', () => { talkText += ch.toLowerCase(); renderOut(); });
+      r.appendChild(k);
+    });
+    if (ri === 2) {
+      const clr = el('<button class="key action">Clear</button>');
+      clr.addEventListener('click', () => { talkText = ''; renderOut(); });
+      r.appendChild(clr);
+    }
+    kb.appendChild(r);
+  });
+  const bottom = el('<div class="kb-row"></div>');
+  const saveB = el('<button class="key action">💾 Save</button>');
+  saveB.addEventListener('click', () => {
+    const t = talkText.trim();
+    if (t && !S.phrases.includes(t)) { S.phrases.unshift(t); S.phrases = S.phrases.slice(0, 8); save(); show('talk'); }
+  });
+  const space = el('<button class="key wide">Space</button>');
+  space.addEventListener('click', () => { talkText += ' '; renderOut(); });
+  const speakB = el('<button class="key speak wide">🔊 Speak</button>');
+  speakB.addEventListener('click', () => { const t = talkText.trim(); if (t) showBig('💬', t, t); });
+  bottom.appendChild(saveB); bottom.appendChild(space); bottom.appendChild(speakB);
+  kb.appendChild(bottom);
+  screen.appendChild(kb);
+};
+
+/* ---- settings ---- */
+SCREENS.settings = () => {
+  screen.appendChild(titleRow('Settings (family/carer)', 'home'));
+  const wrap = el('<div style="max-width:680px;margin:0 auto;"></div>');
+
+  /* mode */
+  const modeRow = el('<div class="set-row"><h3>Screen mode</h3><label>Simple = 6 big buttons for harder days. Full = everything.</label><div></div></div>');
+  const modeBtns = modeRow.querySelector('div:last-child');
+  ['simple', 'full'].forEach(m => {
+    const b = el('<button class="toggle-btn' + (S.mode === m ? ' on' : '') + '">' + (m === 'simple' ? 'Simple' : 'Full') + '</button>');
+    b.addEventListener('click', () => { S.mode = m; save(); show('settings'); });
+    modeBtns.appendChild(b);
+  });
+  wrap.appendChild(modeRow);
+
+  /* voice */
+  const vRow = el('<div class="set-row"><h3>Voice</h3><select id="voice-sel"></select><label>Speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div style="margin-top:10px;"></div></div>');
+  const sel = vRow.querySelector('#voice-sel');
+  sel.appendChild(el('<option value="">Automatic (Australian if available)</option>'));
+  voices.filter(v => v.lang && v.lang.startsWith('en')).forEach(v => {
+    const o = el('<option value="' + escapeHtml(v.voiceURI) + '">' + escapeHtml(v.name + ' (' + v.lang + ')') + '</option>');
+    if (S.voiceURI === v.voiceURI) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', () => { S.voiceURI = sel.value || null; save(); speak('Hello, this is my voice.'); });
+  const rate = vRow.querySelector('#rate');
+  rate.value = S.rate;
+  rate.addEventListener('change', () => { S.rate = parseFloat(rate.value); save(); speak('This is how fast I talk.'); });
+  const test = el('<button class="toggle-btn">🔊 Test voice</button>');
+  test.addEventListener('click', () => speak('Hello, I love you all.'));
+  vRow.querySelector('div:last-child').appendChild(test);
+  wrap.appendChild(vRow);
+
+  /* people */
+  const pRow = el('<div class="set-row"><h3>People</h3><label>Add family and friends with a photo. Photos stay on this device only — nothing is uploaded.</label><div id="plist"></div></div>');
+  const plist = pRow.querySelector('#plist');
+  S.people.forEach((p, idx) => {
+    const r = el('<div class="person-row">' + (p.photo ? '<img src="' + p.photo + '">' : '<span style="font-size:40px;">🙂</span>') + '<span class="nm">' + escapeHtml(p.name) + '</span></div>');
+    const rm = el('<button class="rm">Remove</button>');
+    rm.addEventListener('click', () => { if (confirm('Remove ' + p.name + '?')) { S.people.splice(idx, 1); save(); show('settings'); } });
+    r.appendChild(rm);
+    plist.appendChild(r);
+  });
+  const addWrap = el('<div style="margin-top:12px;"></div>');
+  const nameIn = el('<input class="choice-input" placeholder="Name (e.g. David)">');
+  const fileIn = el('<input type="file" accept="image/*" style="font-size:18px;margin-bottom:10px;">');
+  const addBtn = el('<button class="toggle-btn">＋ Add person</button>');
+  addBtn.addEventListener('click', () => {
+    const name = nameIn.value.trim();
+    if (!name) { alert('Type a name first'); return; }
+    const f = fileIn.files && fileIn.files[0];
+    if (f) {
+      shrinkImage(f, dataUrl => { S.people.push({ name, photo: dataUrl }); save(); show('settings'); });
+    } else {
+      S.people.push({ name, photo: null }); save(); show('settings');
+    }
+  });
+  addWrap.appendChild(nameIn); addWrap.appendChild(fileIn); addWrap.appendChild(addBtn);
+  pRow.appendChild(addWrap);
+  wrap.appendChild(pRow);
+
+  screen.appendChild(wrap);
+};
+
+/* ================= helpers ================= */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function shrinkImage(file, cb) {
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    const max = 300;
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale);
+    c.height = Math.round(img.height * scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    cb(c.toDataURL('image/jpeg', 0.75));
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); alert('Could not read that photo — try another.'); };
+  img.src = url;
+}
+
+/* ================= boot ================= */
+show('home');
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

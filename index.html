@@ -234,7 +234,23 @@ function pickVoice() {
          voices.find(v => v.lang && v.lang.startsWith('en-GB')) ||
          voices.find(v => v.lang && v.lang.startsWith('en')) || null;
 }
+/* Natural recorded voice for known phrases; system voice for typed/custom text. */
+let AUDIO_MAP = {};
+fetch('./audio/map.json').then(r => r.json()).then(m => { AUDIO_MAP = m; }).catch(() => {});
+const player = new Audio();
 function speak(text) {
+  const src = AUDIO_MAP[text];
+  if (src) {
+    try { speechSynthesis.cancel(); } catch (e) {}
+    player.pause();
+    player.src = src;
+    player.currentTime = 0;
+    player.play().catch(() => speakTTS(text));
+    return;
+  }
+  speakTTS(text);
+}
+function speakTTS(text) {
   if (typeof speechSynthesis === 'undefined') return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
@@ -647,7 +663,7 @@ SCREENS.settings = () => {
   wrap.appendChild(tipsRow);
 
   /* voice */
-  const vRow = el('<div class="set-row"><h3>Voice</h3><select id="voice-sel"></select><label>Speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div style="margin-top:10px;"></div></div>');
+  const vRow = el('<div class="set-row"><h3>Voice</h3><label>Board buttons use a recorded natural Australian voice. The settings below only affect typed text and custom choices. Tip: download "Karen (Premium)" on the iPad (Settings → Accessibility → Spoken Content → Voices) for a much better typing voice.</label><select id="voice-sel"></select><label>Speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div style="margin-top:10px;"></div></div>');
   const sel = vRow.querySelector('#voice-sel');
   sel.appendChild(el('<option value="">Automatic (Australian if available)</option>'));
   voices.filter(v => v.lang && v.lang.startsWith('en')).forEach(v => {

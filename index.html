@@ -183,7 +183,16 @@
 'use strict';
 
 /* ================= state ================= */
-const DEFAULTS = { mode: 'full', rate: 0.9, voiceURI: null, people: [], phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'] };
+const DEFAULTS = {
+  mode: 'full', rate: 0.9, voiceURI: null,
+  people: [
+    { name: 'Delma',  photo: null },
+    { name: 'David',  photo: null },
+    { name: 'Hester', photo: null },
+    { name: 'Eryka',  photo: null },
+  ],
+  phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'],
+};
 let S = load();
 function load() {
   try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('talkboard-v1') || '{}')); }
@@ -265,6 +274,28 @@ const FEELINGS = [
   { em: '⚠️', lbl: "Something's wrong", say: 'Something is wrong' },
   { em: '🤗', lbl: 'Hold my hand', say: 'Hold my hand' },
 ];
+const SAYINGS = [
+  { em: '❤️', lbl: 'I love you',        say: 'I love you' },
+  { em: '💪', lbl: "I'll be okay",      say: "I'll be okay" },
+  { em: '🦁', lbl: 'I want to be strong', say: 'I want to be strong' },
+  { em: '😌', lbl: "That's better",     say: "That's better" },
+  { em: '😤', lbl: "It's frustrating",  say: "It's frustrating" },
+  { em: '👂', lbl: 'I can understand you', say: 'I can understand you' },
+  { em: '🤫', lbl: 'Be quiet',          say: 'Be quiet' },
+  { em: '🤨', lbl: 'What are you doing?', say: 'What are you doing?' },
+  { em: '🤔', lbl: 'Why are you asking?', say: 'Why are you asking?' },
+  { em: '💩', lbl: "That's bullshit",   say: "That's bullshit" },
+  { em: '🙄', lbl: 'Fucking ridiculous', say: 'Fucking ridiculous' },
+  { em: '🥹', lbl: "I'm proud of you",  say: "I'm proud of you" },
+  { em: '✋', lbl: "Don't fuss",        say: "Don't fuss over me, I'm alright" },
+  { em: '🪑', lbl: 'Come sit with me',  say: 'Come sit with me' },
+  { em: '⏳', lbl: 'Give me a minute',  say: 'Give me a minute' },
+  { em: '😉', lbl: 'I know',            say: 'I know' },
+  { em: '🎾', lbl: 'Tennis on',         say: 'Put the tennis on' },
+  { em: '⛳', lbl: 'Golf on',           say: 'Put the golf on' },
+  { em: '🏉', lbl: 'Footy on',          say: 'Put the footy on' },
+  { em: '🏆', lbl: "Who's winning?",    say: "Who's winning?" },
+];
 const PAIN_PARTS = [
   { em: '🤕', lbl: 'Head',   part: 'head' },
   { em: '👄', lbl: 'Mouth / throat', part: 'mouth or throat' },
@@ -336,6 +367,7 @@ SCREENS.home = () => {
     g.appendChild(tileBtn(NEEDS[1]));
     g.appendChild(tileBtn(NEEDS[2]));
     g.appendChild(navTile('🛎️', 'I need…', 'needs'));
+    g.appendChild(navTile('🗣️', 'My sayings', 'sayings'));
     g.appendChild(navTile('👨‍👩‍👧', 'People', 'people'));
     g.appendChild(navTile('💬', 'Feelings', 'feelings'));
     g.appendChild(navTile('🔀', 'Choices', 'choices'));
@@ -357,6 +389,14 @@ SCREENS.feelings = () => {
   screen.appendChild(titleRow('Feelings', 'home'));
   const g = el('<div class="grid"></div>');
   FEELINGS.forEach(f => g.appendChild(tileBtn(f)));
+  screen.appendChild(g);
+};
+
+/* ---- his own sayings ---- */
+SCREENS.sayings = () => {
+  screen.appendChild(titleRow('My sayings', 'home'));
+  const g = el('<div class="grid"></div>');
+  SAYINGS.forEach(s => g.appendChild(tileBtn(s)));
   screen.appendChild(g);
 };
 

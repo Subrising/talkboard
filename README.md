@@ -32,6 +32,7 @@ No accounts, no server, free. Anyone who knows the topic name can see alerts, so
 ## Family/carer bits
 
 - **⚙️ gear (bottom-right)** — Settings:
+  - **His voice** — five natural recorded voices (Australian, NZ and British) for all board buttons; tap to preview. The default voice works fully offline; other voices work offline after first use online.
   - **Simple mode** for harder days: just Yes/No + six essential buttons.
   - **Full mode** for better moments: pain locator, feelings, people, typing, choices.
   - Add **People** with photos and names.

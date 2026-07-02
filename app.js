@@ -17,6 +17,7 @@ const DEFAULTS = {
   scenes: [],
   btnSize: 'normal',
   choiceSets: [],
+  recVoice: 'william',
   phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'],
 };
 let S = load();
@@ -42,12 +43,19 @@ function pickVoice() {
 let AUDIO_MAP = {};
 fetch('./audio/map.json').then(r => r.json()).then(m => { AUDIO_MAP = m; }).catch(() => {});
 const player = new Audio();
+const REC_VOICES = [
+  ['william',  'William — Australian'],
+  ['mitchell', 'Mitchell — New Zealand'],
+  ['ryan',     'Ryan — British'],
+  ['thomas',   'Thomas — British'],
+  ['natasha',  'Natasha — Australian, female'],
+];
 function speak(text) {
-  const src = AUDIO_MAP[text];
-  if (src) {
+  const file = AUDIO_MAP[text];
+  if (file) {
     try { speechSynthesis.cancel(); } catch (e) {}
     player.pause();
-    player.src = src;
+    player.src = './audio/' + (S.recVoice || 'william') + '/' + file;
     player.currentTime = 0;
     player.play().catch(() => speakTTS(text));
     return;
@@ -731,8 +739,23 @@ SCREENS.settings = () => {
   bkBox.appendChild(expBtn); bkBox.appendChild(impBtn); bkBox.appendChild(impIn);
   wrap.appendChild(bkRow);
 
+  /* recorded voice */
+  const rvRow = el('<div class="set-row"><h3>His voice</h3><label>Natural recorded voice used for all board buttons. Tap one to hear it.</label><div></div></div>');
+  const rvBox = rvRow.querySelector('div:last-child');
+  REC_VOICES.forEach(([key, lbl]) => {
+    const b = el('<button class="toggle-btn' + (S.recVoice === key ? ' on' : '') + '" style="display:block;width:100%;text-align:left;margin-right:0;">' + lbl + '</button>');
+    b.addEventListener('click', () => {
+      S.recVoice = key; save();
+      speak('Hello, I love you all.');
+      rvBox.querySelectorAll('.toggle-btn').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+    });
+    rvBox.appendChild(b);
+  });
+  wrap.appendChild(rvRow);
+
   /* voice */
-  const vRow = el('<div class="set-row"><h3>Voice</h3><label>Board buttons use a recorded natural Australian voice. The settings below only affect typed text and custom choices. Tip: download "Karen (Premium)" on the iPad (Settings → Accessibility → Spoken Content → Voices) for a much better typing voice.</label><select id="voice-sel"></select><label>Speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div style="margin-top:10px;"></div></div>');
+  const vRow = el('<div class="set-row"><h3>Typing voice</h3><label>Used only for typed text and custom choices (the board buttons use the recorded voice above). Tip: download "Karen (Premium)" on the iPad (Settings → Accessibility → Spoken Content → Voices) for a much better typing voice.</label><select id="voice-sel"></select><label>Speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05"><div style="margin-top:10px;"></div></div>');
   const sel = vRow.querySelector('#voice-sel');
   sel.appendChild(el('<option value="">Automatic (Australian if available)</option>'));
   voices.filter(v => v.lang && v.lang.startsWith('en')).forEach(v => {

@@ -330,7 +330,7 @@ SCREENS.home = () => {
   const g = el('<div class="grid big"></div>');
   const painItem = { em: '🤕', img: I('pain'), lbl: 'Pain' };
   if (S.mode === 'yesno') {
-    g.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    g.classList.add('fill2');
     const yes = el('<button class="tile" style="min-height:34vh;background:var(--green-bg);color:var(--green);"><div class="em">👍</div><div class="lbl" style="font-size:clamp(30px,5vw,48px);">YES</div></button>');
     yes.addEventListener('click', () => showBig('👍', 'YES', 'Yes'));
     const no = el('<button class="tile" style="min-height:34vh;background:var(--red-bg);color:var(--red);"><div class="em">👎</div><div class="lbl" style="font-size:clamp(30px,5vw,48px);">NO</div></button>');
@@ -342,6 +342,7 @@ SCREENS.home = () => {
     g.appendChild(yes); g.appendChild(no); g.appendChild(pain); g.appendChild(need);
     g.appendChild(callTile(true));
   } else if (S.mode === 'simple') {
+    g.classList.add('fill2');
     const byLbl = (list, lbl) => list.find(x => x.lbl === lbl);
     // 4 targets max at his stage (AssistiveWare grid-size guidance for emerging communicators)
     g.appendChild(tileBtn(byLbl(NEEDS, 'Drink')));
@@ -1093,7 +1094,8 @@ SCREENS.settings = () => {
   wrap.appendChild(vRow);
 
   /* real photos on his buttons */
-  const PHOTO_SLOTS = ['Drink', 'Toilet', 'Pain', 'COME HERE', 'Hungry', 'Rest', 'Nurse', 'Coffee', 'Water', 'TV on', 'Blanket', 'My tablets'];
+  // Help / Move me / Sit me up / Wait have the weakest pictograms — a real photo helps those most
+  const PHOTO_SLOTS = ['Drink', 'Toilet', 'Pain', 'COME HERE', 'Help', 'Move me', 'Sit me up', 'Wait', 'Hungry', 'Rest', 'Nurse', 'Coffee', 'Water', 'TV on', 'Blanket', 'My tablets'];
   const pbRow = el('<div class="set-row"><h3>Real photos on his buttons</h3><label>His recognition of REAL things outlasts symbols and words. Photograph HIS actual mug, HIS chair, the actual toilet door — one object, plain background, good light — and put it on the button. Photos stay on this device.</label><div id="pblist"></div></div>');
   const pblist = pbRow.querySelector('#pblist');
   PHOTO_SLOTS.forEach(lbl => {

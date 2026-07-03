@@ -20,6 +20,7 @@ const DEFAULTS = {
   recVoice: 'william',
   theme: 'auto',
   showType: false,
+  setupDone: false,
   phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'],
 };
 let S = load();
@@ -87,9 +88,10 @@ const bigTxt = document.getElementById('big-txt');
 const bigNote = document.getElementById('big-note');
 let lastSpoken = '';
 let lastTapAt = 0;
+let bigTimer = null;
 function showBig(icon, text, speakText, photo, pic) {
   const now = Date.now();
-  if (now - lastTapAt < 300) return;   // tremor / accidental double-tap guard
+  if (now - lastTapAt < (S.mode === 'full' ? 300 : 1000)) return;   // tremor guard; longer in his modes
   lastTapAt = now;
   lastSpoken = speakText || text;
   if (text !== 'YES' && text !== 'NO') {
@@ -102,7 +104,10 @@ function showBig(icon, text, speakText, photo, pic) {
   else bigIcon.textContent = icon || '';
   bigTxt.textContent = text;
   bigNote.textContent = '';
+  big.classList.toggle('lite', S.mode !== 'full');   // his modes: no buttons, any tap closes, auto-dismiss
   big.classList.add('show');
+  clearTimeout(bigTimer);
+  if (S.mode !== 'full') bigTimer = setTimeout(() => big.classList.remove('show'), 8000);
   speak(lastSpoken);
 }
 
@@ -126,14 +131,19 @@ function sendCall() {
 }
 document.getElementById('big-again').addEventListener('click', e => { e.stopPropagation(); speak(lastSpoken); });
 document.getElementById('big-close').addEventListener('click', () => big.classList.remove('show'));
-big.addEventListener('click', e => { if (e.target === big) big.classList.remove('show'); });
+big.addEventListener('click', e => { if (big.classList.contains('lite') || e.target === big) big.classList.remove('show'); });
 
 /* ================= top bar ================= */
 document.getElementById('btn-yes').addEventListener('click', () => showBig('✓', 'YES', 'Yes'));
 document.getElementById('btn-no').addEventListener('click', () => showBig('✗', 'NO', 'No'));
 document.getElementById('btn-again').addEventListener('click', () => { if (lastSpoken) speak(lastSpoken); });
 document.getElementById('btn-home').addEventListener('click', () => show('home'));
-document.getElementById('gear').addEventListener('click', () => show('settings'));
+(() => {  // gear: hold ~0.6s to open — a stray tap must not land him in Settings
+  const gear = document.getElementById('gear');
+  let t = null;
+  gear.addEventListener('pointerdown', () => { t = setTimeout(() => show('settings'), 600); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => gear.addEventListener(ev, () => clearTimeout(t)));
+})();
 
 /* ================= content ================= */
 const I = n => './icons/' + n + '.png';
@@ -145,17 +155,17 @@ const NEEDS = [
   { em: '😮‍💨', img: I('breathe'),  lbl: 'Breathing',  say: "I'm having trouble breathing" },
   { em: '🤢', img: I('sick'),       lbl: 'Feel sick',  say: 'I feel sick in my stomach' },
   { em: '💫', img: I('dizzy'),      lbl: 'Dizzy',      say: "I'm feeling dizzy" },
-  { em: '💊', img: I('medication'), lbl: 'Medication', say: 'I think I need my medication' },
+  { em: '💊', img: I('medication'), lbl: 'My tablets', say: 'I think I need my medication' },
   { em: '🛏️', img: I('move'),       lbl: 'Move me',    say: "Can you help me move? I'm uncomfortable" },
   { em: '🙇', img: I('situp'),      lbl: 'Sit me up',  say: 'Can you help me sit up?' },
-  { em: '✋', img: I('stop'),       lbl: 'Stop — enough', say: "Stop please — I've had enough for now" },
+  { em: '✋', img: I('stop'),       lbl: 'Stop', say: "Stop please — I've had enough for now" },
   { em: '🥵', img: I('hot'),        lbl: 'Too hot',    say: "I'm too hot" },
   { em: '🥶', img: I('cold'),       lbl: 'Too cold',   say: "I'm cold" },
   { em: '🍽️', img: I('hungry'),     lbl: 'Hungry',     say: "I'm hungry" },
   { em: '😴', img: I('sleep'),      lbl: 'Rest',       say: "I'm tired. I need to rest" },
   { em: '👄', img: I('drymouth'),   lbl: 'Dry mouth',  say: 'My mouth is dry' },
   { em: '⚠️', img: I('wrong'),      lbl: "Something's wrong", say: 'Something is wrong. Please check on me' },
-  { em: '❓', img: I('question'),   lbl: 'Something else', say: 'I need something — please ask me yes or no questions' },
+  { em: '❓', img: I('question'),   lbl: 'Ask me questions', say: 'I need something — please ask me yes or no questions' },
 ];
 const EVERYDAY = [
   { em: '🚰', img: I('water'),   lbl: 'Water',        say: 'Can I have some water?' },
@@ -170,7 +180,7 @@ const EVERYDAY = [
   { em: '📱', img: I('phone'),   lbl: 'My phone',     say: 'Can you pass me my phone?' },
   { em: '🧻', img: I('tissue'),  lbl: 'Tissue',       say: 'Can I have a tissue?' },
   { em: '🧣', img: I('blanket'), lbl: 'Blanket',      say: 'I want a blanket please' },
-  { em: '⏳', img: I('wait'),    lbl: 'Wait a moment', say: 'Wait a moment please' },
+  { em: '⏳', img: I('wait'),    lbl: 'Wait', say: 'Wait a moment please' },
   { em: '👍', img: I('ok'),      lbl: 'I feel better', say: "I'm feeling a bit better now" },
 ];
 const SPORT = [
@@ -191,7 +201,7 @@ const FEELINGS = [
   { em: '🧑‍🤝‍🧑', img: I('sit'),     lbl: 'Sit with me',  say: 'Come and sit with me' },
   { em: '🤲', img: I('holdhand'),   lbl: 'Hold my hand', say: 'Will you hold my hand?' },
   { em: '🤫', img: I('quiet'),      lbl: 'Quiet please', say: "I'd like some quiet please" },
-  { em: '🚪', img: I('alone'),      lbl: 'Time alone',   say: "I'd like some time on my own for a bit" },
+  { em: '🚪', img: I('alone'),      lbl: 'Leave me be',  say: "I'd like some time on my own for a bit" },
   { em: '😟', img: I('scared'),     lbl: "I'm scared",   say: "I'm feeling scared" },
   { em: '😤', img: I('frustrated'), lbl: 'Frustrated',   say: "I'm frustrated — give me a moment" },
   { em: '😕', img: I('confused'),   lbl: 'Confused',     say: "I'm confused" },
@@ -208,7 +218,7 @@ const HEART = [
   { em: '💕', img: I('family'),  lbl: 'Love to everyone',  say: 'Give everyone my love' },
   { em: '🪑', img: I('together'), lbl: 'Stay with me',     say: 'Please stay with me' },
   { em: '👋', img: I('closer'),  lbl: 'Come closer',       say: 'Come closer' },
-  { em: '🤍', lbl: 'Company — no need to talk', say: "I just want company — we don't need to talk" },
+  { em: '🤍', lbl: 'Just sit with me', say: "I just want company — we don't need to talk" },
   { em: '🤗', img: I('holdhand'), lbl: 'Hold my hand',     say: 'Hold my hand' },
   { em: '😘', img: I('kiss'),    lbl: 'Kiss me',           say: 'Give me a kiss' },
   { em: '👋', img: I('goodbye'), lbl: 'Goodbye',           say: 'Goodbye. I love you all.' },
@@ -220,7 +230,7 @@ const SAYINGS = [
   { em: '🫡', lbl: "I'm still here",    say: "I'm still here" },
   { em: '😌', lbl: "That's better",     say: "That's better" },
   { em: '😤', img: I('frustrated'), lbl: "It's frustrating", say: "It's frustrating" },
-  { em: '👂', img: I('understand'), lbl: 'I can understand you', say: 'I can understand you' },
+  { em: '👂', img: I('understand'), lbl: 'I understand', say: 'I can understand you' },
   { em: '👂', img: I('heard'), lbl: 'I heard you',       say: 'I heard you' },
   { em: '✋', lbl: "Leave it, I'm fine", say: "Leave it, I'm fine" },
   { em: '🤫', img: I('quiet'), lbl: 'Be quiet',          say: 'Be quiet' },
@@ -236,14 +246,14 @@ const SAYINGS = [
 ];
 const PAIN_PARTS = [
   { em: '🤕', img: I('head'),     lbl: 'Head',   part: 'head' },
-  { em: '👄', img: I('throat'),   lbl: 'Mouth / throat', part: 'mouth or throat' },
+  { em: '👄', img: I('throat'),   lbl: 'Mouth', part: 'mouth or throat' },
   { em: '🫁', img: I('chest'),    lbl: 'Chest',  part: 'chest' },
   { em: '🤢', img: I('tummy'),    lbl: 'Tummy',  part: 'tummy' },
   { em: '⬅️', img: I('backpain'), lbl: 'Back',   part: 'back' },
   { em: '💪', img: I('arm'),      lbl: 'Arms',   part: 'arm' },
   { em: '🦵', img: I('leg'),      lbl: 'Legs',   part: 'leg' },
   { em: '🧣', img: I('neck'),     lbl: 'Neck',   part: 'neck' },
-  { em: '😖', img: I('pain'),     lbl: 'All over / not sure', part: null },
+  { em: '😖', img: I('pain'),     lbl: 'Everywhere', part: null },
 ];
 const SEVERITIES = [
   { em: '🙂', lbl: 'A little', say: 'a little bit' },
@@ -288,8 +298,18 @@ function titleRow(text, backTo) {
 }
 
 const SCREENS = {};
+function applyChrome() {
+  // yesno: giant on-screen YES/NO already exist — a second smaller pair splits motor learning.
+  // his modes: no repeat/home icons — one mis-tap lands him somewhere unfamiliar. Family: hold the gear.
+  const yn = S.mode === 'yesno';
+  const lite = S.mode !== 'full';
+  document.getElementById('topbar').style.display = yn ? 'none' : '';
+  document.getElementById('btn-again').style.display = lite ? 'none' : '';
+  document.getElementById('btn-home').style.display = lite ? 'none' : '';
+}
 function show(name, arg) {
   if (typeof stopCam === 'function' && name !== 'eyeCam') stopCam();
+  applyChrome();
   screenEl.innerHTML = '';
   screenEl.scrollTop = 0;
   SCREENS[name](arg);
@@ -313,19 +333,18 @@ SCREENS.home = () => {
     no.addEventListener('click', () => showBig('✗', 'NO', 'No'));
     const pain = el('<button class="tile warn" style="min-height:34vh;">' + tileVisual(painItem) + '<div class="lbl" style="font-size:clamp(30px,5vw,48px);">PAIN</div></button>');
     pain.addEventListener('click', () => showBig('🤕', 'PAIN', "I'm in pain", null, I('pain')));
-    const need = el('<button class="tile" style="min-height:34vh;">' + tileVisual({ em: '❓', img: I('question') }) + '<div class="lbl" style="font-size:clamp(30px,5vw,48px);">I NEED SOMETHING</div></button>');
-    need.addEventListener('click', () => showBig('❓', 'I need something', 'I need something — please ask me yes or no questions', null, I('question')));
+    const need = el('<button class="tile" style="min-height:34vh;">' + tileVisual({ em: '❓', img: I('question') }) + '<div class="lbl" style="font-size:clamp(30px,5vw,48px);">HELP</div></button>');
+    need.addEventListener('click', () => showBig('❓', 'HELP', 'I need some help please', null, I('question')));
     g.appendChild(yes); g.appendChild(no); g.appendChild(pain); g.appendChild(need);
     g.appendChild(callTile(true));
   } else if (S.mode === 'simple') {
     const byLbl = (list, lbl) => list.find(x => x.lbl === lbl);
-    [byLbl(NEEDS, 'Drink'), byLbl(NEEDS, 'Toilet'), byLbl(NEEDS, 'Nurse')].forEach(n => g.appendChild(tileBtn(n)));
+    // 4 targets max at his stage (AssistiveWare grid-size guidance for emerging communicators)
+    g.appendChild(tileBtn(byLbl(NEEDS, 'Drink')));
+    g.appendChild(tileBtn(byLbl(NEEDS, 'Toilet')));
     const pain = el('<button class="tile warn">' + tileVisual(painItem) + '<div class="lbl">Pain</div></button>');
     pain.addEventListener('click', () => showBig('🤕', 'PAIN', "I'm in pain", null, I('pain')));
     g.appendChild(pain);
-    g.appendChild(tileBtn(byLbl(NEEDS, 'Hungry')));
-    g.appendChild(tileBtn(byLbl(NEEDS, 'Rest')));
-    g.appendChild(tileBtn(byLbl(FEELINGS, 'I love you')));
     g.appendChild(callTile(false));
   } else {
     if (S.recent && S.recent.length) {
@@ -353,7 +372,7 @@ SCREENS.home = () => {
     g.appendChild(navTile('💬', 'Feelings', 'feelings', 'c-feel'));
     g.appendChild(navTile('👨‍👩‍👧', 'People', 'people', 'c-people'));
     if (S.scenes && S.scenes.length) g.appendChild(navTile('🖼️', 'My room', 'scenes', 'c-people'));
-    g.appendChild(navTile('🔀', 'Choices', 'choices'));
+    g.appendChild(navTile('❓', 'Ask him', 'ask'));
     if (S.showType) g.appendChild(navTile('⌨️', 'Type', 'talk'));
   }
   screenEl.appendChild(g);
@@ -427,7 +446,7 @@ SCREENS.tapYes = () => {
 
 /* ---- eye pointing: options at screen extremes, family reads his gaze ---- */
 SCREENS.eyeShow = (opts) => {
-  screenEl.appendChild(titleRow('Watch his eyes, tap what they choose', 'choices'));
+  screenEl.appendChild(titleRow('Watch his eyes, tap what they choose', 'ask'));
   screenEl.appendChild(el('<div style="font-size:18px;color:var(--muted);text-align:center;margin-bottom:2vh;">Hold the screen facing him at eye level, ~50 cm away. Say: "Look at the one you want."</div>'));
   const wrap = el('<div style="display:grid;grid-template-columns:1fr 1fr;column-gap:16vw;row-gap:6vh;align-items:center;min-height:52vh;"></div>');
   opts.slice(0, 4).forEach(o => {
@@ -448,7 +467,7 @@ SCREENS.eyeCam = (opts) => {
   stopCam();
   const [optL, optR] = opts;
   let swap = false;
-  const tr = titleRow('Live eye view', 'choices');
+  const tr = titleRow('Live eye view', 'ask');
   screenEl.appendChild(tr);
   const status = el('<div style="font-size:18px;color:var(--muted);text-align:center;margin-bottom:8px;">Starting camera…</div>');
   const video = el('<video autoplay playsinline muted style="width:180px;border-radius:14px;display:block;margin:0 auto 10px;transform:scaleX(-1);"></video>');
@@ -516,7 +535,7 @@ function irisRatio(f, iris, cA, cB) {
 
 /* ---- partner-assisted scanning: one option at a time, carer watches for his signal ---- */
 SCREENS.scanPick = () => {
-  screenEl.appendChild(titleRow('One at a time (family/carer)', 'choices'));
+  screenEl.appendChild(titleRow('One at a time (family/carer)', 'ask'));
   screenEl.appendChild(el('<div style="font-size:19px;color:var(--muted);margin:0 6px 12px;max-width:640px;">Options appear ONE at a time, big, and spoken. Watch him — any signal (squeeze, blink, nod, sound) means yes: tap <b>That\'s it</b>. No signal: tap <b>Next</b>. Pick which list to go through:</div>'));
   const g = el('<div class="grid"></div>');
   [['I need…', 'needs'], ['Everyday', 'everyday'], ['Feelings', 'feelings'], ['From the heart', 'heart'], ['People', 'people']].forEach(([lbl, key]) => {
@@ -610,6 +629,57 @@ SCREENS.sceneEdit = (draft) => {
   screenEl.appendChild(saveBtn);
 };
 
+/* ---- guided device setup for family ---- */
+SCREENS.setup = (idx) => {
+  idx = idx || 0;
+  function nxt() { save(); applyBtnSize(); applyLayout(); show('setup', idx + 1); }
+  const steps = [
+    { title: 'Set up this device', sub: 'A few quick choices — all changeable later in Settings (hold the gear in the corner).',
+      opts: [['Start ›', () => show('setup', 1)]] },
+    { title: 'How is he going right now?', sub: 'This sets how much appears on his screen. Match it to his day.',
+      opts: [
+        ['Very hard days — Yes/No only', () => { S.mode = 'yesno'; nxt(); }],
+        ['Most days — 4 essential buttons', () => { S.mode = 'simple'; nxt(); }],
+        ['Clearer windows — everything', () => { S.mode = 'full'; nxt(); }]] },
+    { title: 'Button size', sub: 'Bigger is easier to hit. When unsure, go bigger.',
+      opts: [
+        ['Huge', () => { S.btnSize = 'huge'; nxt(); }],
+        ['Big', () => { S.btnSize = 'big'; nxt(); }],
+        ['Normal', () => { S.btnSize = 'normal'; nxt(); }]] },
+    { title: 'Does he notice both sides of the screen?', sub: 'After a left-side brain injury some people stop seeing the RIGHT side. If everything he responds to is on the left, pick One column.',
+      opts: [
+        ['Both sides fine — normal grid', () => { S.layout = 'grid'; nxt(); }],
+        ['He misses the right side — one column, on the left', () => { S.layout = 'column'; nxt(); }]] },
+    { title: 'Pick his voice', sub: 'Tap each to hear it. This voice speaks every button.', voice: true,
+      opts: [['Keep this voice ›', () => nxt()]] },
+    { title: 'All set', sub: 'Worth doing next in Settings: add family PHOTOS under People (photos beat symbols for him), set up COME HERE phone alerts, and read the two-minute tips page.',
+      opts: [['Done', () => { S.setupDone = true; save(); applyBtnSize(); applyLayout(); show('home'); }]] },
+  ];
+  const st = steps[Math.min(idx, steps.length - 1)];
+  const wrap = el('<div style="max-width:640px;margin:4vh auto 0;text-align:center;padding:0 8px;"></div>');
+  wrap.appendChild(el('<div style="font-size:15px;color:var(--muted);letter-spacing:.05em;">STEP ' + (idx + 1) + ' OF ' + steps.length + '</div>'));
+  wrap.appendChild(el('<h2 style="font-size:clamp(26px,4vw,36px);margin:10px 0 8px;">' + st.title + '</h2>'));
+  wrap.appendChild(el('<div style="font-size:19px;color:var(--muted);margin-bottom:3vh;">' + st.sub + '</div>'));
+  if (st.voice) {
+    REC_VOICES.forEach(([key, lbl]) => {
+      const b = el('<button class="toggle-btn' + (S.recVoice === key ? ' on' : '') + '" style="display:block;width:100%;text-align:left;margin:0 0 8px;">' + lbl + '</button>');
+      b.addEventListener('click', () => { S.recVoice = key; save(); speak('Hello, I love you all.'); show('setup', idx); });
+      wrap.appendChild(b);
+    });
+  }
+  st.opts.forEach(([lbl, fn]) => {
+    const b = el('<button class="primary-btn" style="margin-bottom:10px;">' + lbl + '</button>');
+    b.addEventListener('click', fn);
+    wrap.appendChild(b);
+  });
+  if (idx > 0 && idx < steps.length - 1) {
+    const skip = el('<button class="backbtn" style="margin-top:6px;">Skip</button>');
+    skip.addEventListener('click', () => show('setup', idx + 1));
+    wrap.appendChild(skip);
+  }
+  screenEl.appendChild(wrap);
+};
+
 /* ---- tips for family ---- */
 SCREENS.tips = () => {
   screenEl.appendChild(titleRow('Tips for family & carers', 'settings'));
@@ -674,16 +744,28 @@ SCREENS.people = () => {
 };
 
 /* ---- choices (caregiver sets up, he picks) ---- */
-SCREENS.choices = () => {
-  screenEl.appendChild(titleRow('Set up a choice (family/carer)', 'home'));
+/* ---- "Ask him" hub: every way to ask, ordered easiest-for-him first ---- */
+SCREENS.ask = () => {
+  screenEl.appendChild(titleRow('Ask him something (family/carer)', 'home'));
+  const wrap = el('<div style="max-width:680px;margin:0 auto;"></div>');
+  const card = (em, name, when, fn) => {
+    const b = el('<button class="tile" style="width:100%;min-height:0;padding:16px 18px;margin-bottom:10px;flex-direction:row;justify-content:flex-start;gap:16px;text-align:left;"><div class="em" style="font-size:40px;">' + em + '</div><div><div class="lbl" style="font-size:22px;">' + name + '</div><div style="font-size:17px;color:var(--muted);margin-top:2px;">' + when + '</div></div></button>');
+    b.addEventListener('click', fn);
+    wrap.appendChild(b);
+  };
+  card('🔁', 'One at a time', 'You flip through spoken options; he gives ANY yes-signal. Start here — no tapping concept needed.', () => show('scanPick'));
+  card('✋', 'Tap anywhere = YES', 'One yes/no question out loud: any touch means YES. No aiming.', () => show('tapYes'));
+  card('👀', 'Eye pointing', 'When tapping is too hard: hold the screen up, he looks, you tap it for him.', () => show('choiceSetup', 'eye'));
+  card('🔀', 'He taps a choice', 'Good windows only: 2–4 big options he taps himself.', () => show('choiceSetup', 'tap'));
+  card('📷', 'Live eye view', "Only if you can't read his eyes yourself — the camera highlights the side he looks at.", () => show('choiceSetup', 'cam'));
+  screenEl.appendChild(wrap);
+};
+
+SCREENS.choiceSetup = (target) => {
+  const titles = { tap: 'He taps a choice', eye: 'Eye pointing', cam: 'Live eye view' };
+  screenEl.appendChild(titleRow(titles[target] || 'Choices', 'ask'));
   const wrap = el('<div style="max-width:640px;margin:0 auto;"></div>');
-  const scanBtn = el('<button class="primary-btn" style="margin-bottom:10px;">🔁 One at a time — he just signals yes ›</button>');
-  scanBtn.addEventListener('click', () => show('scanPick'));
-  wrap.appendChild(scanBtn);
-  const tapBtn = el('<button class="primary-btn" style="margin-bottom:14px;background:var(--green);">✋ Tap anywhere = YES (no aiming) ›</button>');
-  tapBtn.addEventListener('click', () => show('tapYes'));
-  wrap.appendChild(tapBtn);
-  wrap.appendChild(el('<div style="font-size:19px;color:var(--muted);margin-bottom:12px;">Type 2–4 options, tap <b>Show him the choices</b>, then hand over the screen.</div>'));
+  wrap.appendChild(el('<div style="font-size:19px;color:var(--muted);margin-bottom:12px;">Type ' + (target === 'cam' ? '2' : '2–4') + ' options, then hand him the screen.</div>'));
   const inputs = [];
   for (let i = 0; i < 4; i++) {
     const inp = el('<input class="choice-input" placeholder="Option ' + (i + 1) + (i < 2 ? '' : ' (optional)') + '">');
@@ -701,7 +783,7 @@ SCREENS.choices = () => {
     const recRow = el('<div class="chips"></div>');
     S.choiceSets.forEach(set => {
       const c = el('<button class="chip">' + set.map(escapeHtml).join(' / ') + '</button>');
-      c.addEventListener('click', () => show('choicesShow', set));
+      c.addEventListener('click', () => { if (target === 'eye') show('eyeShow', set); else if (target === 'cam') show('eyeCam', set.slice(0, 2)); else show('choicesShow', set); });
       recRow.appendChild(c);
     });
     wrap.appendChild(recRow);
@@ -715,19 +797,19 @@ SCREENS.choices = () => {
     }
     return opts;
   }
-  const go = el('<button class="primary-btn">Show him the choices (tap) ›</button>');
-  go.addEventListener('click', () => { const o = getOpts(); if (o.length >= 2) show('choicesShow', o); });
+  const go = el('<button class="primary-btn">Show him ›</button>');
+  go.addEventListener('click', () => {
+    const o = getOpts();
+    if (o.length < 2) return;
+    if (target === 'eye') show('eyeShow', o);
+    else if (target === 'cam') show('eyeCam', o.slice(0, 2));
+    else show('choicesShow', o);
+  });
   wrap.appendChild(go);
-  const eyeB = el('<button class="primary-btn" style="background:#5a3f8f;">👀 Eye pointing — he looks, you tap ›</button>');
-  eyeB.addEventListener('click', () => { const o = getOpts(); if (o.length >= 2) show('eyeShow', o); });
-  wrap.appendChild(eyeB);
-  const camB = el('<button class="primary-btn" style="background:#245c50;">📷 Live eye view (camera, first 2 options) ›</button>');
-  camB.addEventListener('click', () => { const o = getOpts(); if (o.length >= 2) show('eyeCam', o.slice(0, 2)); });
-  wrap.appendChild(camB);
   screenEl.appendChild(wrap);
 };
 SCREENS.choicesShow = (opts) => {
-  screenEl.appendChild(titleRow('Tap what you want', 'choices'));
+  screenEl.appendChild(titleRow('Tap what you want', 'ask'));
   const g = el('<div class="grid big" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));"></div>');
   opts.forEach(o => {
     const b = el('<button class="tile" style="min-height:200px;"><div class="lbl" style="font-size:clamp(30px,4.5vw,44px);">' + escapeHtml(o) + '</div></button>');
@@ -813,6 +895,16 @@ SCREENS.talk = () => {
 SCREENS.settings = () => {
   screenEl.appendChild(titleRow('Settings (family/carer)', 'home'));
   const wrap = el('<div style="max-width:680px;margin:0 auto;"></div>');
+
+  /* family quick links (his modes hide the home button, so this is the family's doorway) */
+  const qlRow = el('<div class="set-row"><h3>Family screens</h3><div></div></div>');
+  const qlBox = qlRow.querySelector('div:last-child');
+  [['❓ Ask him', 'ask'], ['📖 Tips', 'tips'], ['🧭 Device setup', 'setup']].forEach(([lbl, scr]) => {
+    const b = el('<button class="toggle-btn">' + lbl + '</button>');
+    b.addEventListener('click', () => show(scr, scr === 'setup' ? 0 : undefined));
+    qlBox.appendChild(b);
+  });
+  wrap.appendChild(qlRow);
 
   /* mode */
   const modeRow = el('<div class="set-row"><h3>Screen mode</h3><label>Match the mode to his day: Yes/No for the hardest days, Simple for 6 big buttons, Full for everything.</label><div></div></div>');
@@ -1061,7 +1153,7 @@ async function keepAwake() {
 keepAwake();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
 
-show('home');
+show(S.setupDone ? 'home' : 'setup');
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

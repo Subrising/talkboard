@@ -102,6 +102,8 @@
   #big-again { background: #ffffff22; color: #fff; border: 2px solid #ffffff66; }
   #big-close { background: #fff; color: #1a2233; }
   #big-note { font-size: clamp(20px, 3vw, 30px); font-weight: 600; color: #b9e6c5; min-height: 1.2em; }
+  /* lite overlay (his modes): no buttons to operate, any tap closes, auto-dismisses */
+  #big.lite .row, #big.lite #big-note { display: none; }
 
   /* ---------- visual scenes ---------- */
   .scene-wrap { position: relative; max-width: 920px; margin: 0 auto; }
@@ -282,6 +284,6 @@
   </div>
 </div>
 
-<script src="./app.js?v=15"></script>
+<script src="./app.js?v=16"></script>
 </body>
 </html>

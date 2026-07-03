@@ -21,6 +21,7 @@ const DEFAULTS = {
   theme: 'auto',
   showType: false,
   setupDone: false,
+  photoBtns: {},
   phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'],
 };
 let S = load();
@@ -100,7 +101,7 @@ function showBig(icon, text, speakText, photo, pic) {
     save();
   }
   if (photo) bigIcon.innerHTML = '<img class="face" src="' + photo + '" alt="">';
-  else if (pic) bigIcon.innerHTML = '<img class="pic" src="' + pic + '" alt="">';
+  else if (pic) bigIcon.innerHTML = '<img class="pic' + (String(pic).indexOf('data:') === 0 ? ' photo' : '') + '" src="' + pic + '" alt="">';
   else bigIcon.textContent = icon || '';
   bigTxt.textContent = text;
   bigNote.textContent = '';
@@ -271,14 +272,17 @@ const CHOICE_PRESETS = [
 const screenEl = document.getElementById('screen');
 /** @returns {any} first element of the parsed fragment (typed loosely; runtime is always an HTMLElement) */
 function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+function photoFor(lbl) { return (S.photoBtns || {})[lbl] || null; }
 function tileVisual(item) {
+  const ov = photoFor(item.lbl);
+  if (ov) return '<img class="pic photo" src="' + ov + '" alt="">';
   return item.img
     ? '<img class="pic" src="' + item.img + '" alt="" onerror="this.outerHTML=\'<div class=&quot;em&quot;>' + item.em + '</div>\'">'
     : '<div class="em">' + item.em + '</div>';
 }
 function tileBtn(item, cls) {
   const b = el('<button class="tile ' + (cls || '') + '">' + tileVisual(item) + '<div class="lbl">' + item.lbl + '</div></button>');
-  b.addEventListener('click', () => showBig(item.em, item.lbl, item.say, null, item.img));
+  b.addEventListener('click', () => showBig(item.em, item.lbl, item.say, null, photoFor(item.lbl) || item.img));
   return b;
 }
 function navTile(em, lbl, target, cls) {
@@ -317,7 +321,7 @@ function show(name, arg) {
 
 /* ---- home ---- */
 function callTile(big) {
-  const b = el('<button class="tile" style="background:var(--red-bg);color:var(--red);' + (big ? 'min-height:24vh;grid-column:1 / -1;' : '') + '">' + tileVisual({ em: '📣', img: I('call') }) + '<div class="lbl"' + (big ? ' style="font-size:clamp(30px,5vw,48px);"' : '') + '>COME HERE</div></button>');
+  const b = el('<button class="tile" style="background:var(--red-bg);color:var(--red);' + (big ? 'min-height:24vh;grid-column:1 / -1;' : '') + '">' + tileVisual({ em: '📣', img: I('call'), lbl: 'COME HERE' }) + '<div class="lbl"' + (big ? ' style="font-size:clamp(30px,5vw,48px);"' : '') + '>COME HERE</div></button>');
   b.addEventListener('click', sendCall);
   return b;
 }
@@ -693,6 +697,7 @@ SCREENS.tips = () => {
     <p><b>As ability changes, step down the ladder:</b> typing → picture buttons → yes/no → hand squeeze or blink. Agree the hand-squeeze yes/no signal with everyone <i>now</i>, so it's ready if needed.</p>
     <p><b>Teach through his hands, not through explaining.</b> If instructions aren't landing but repeated physical actions become automatic (like his transfers), use that: guide his hand to tap YES while saying "yes" — ten times, several short sessions a day, one or two buttons only, always the same spot. Guide him <i>before</i> he can get it wrong; never quiz. The movement can become automatic even when the explanation can't. The same method teaches a hand squeeze.</p>
     <p><b>When choosing between options is too much,</b> use <b>Choices → One at a time</b>: the screen shows and speaks one option at a time, and he only has to give you any yes-signal. You tap, he signals — that's the whole task.</p>
+    <p><b>Show, don't ask.</b> Hold up the actual thing — the cup, the remote, the blanket — and say its word as you do. Recognising real objects outlasts words and pictures; he answers "the cup in your hand", not the sentence. Photograph his own things onto the buttons (Settings → Real photos).</p>
     <p><b>His eyes still point.</b> Choices → Eye pointing puts options at opposite sides — hold the screen facing him at eye level and watch where his eyes go, then tap it for him. Looking at what you want needs no instructions at all. The camera Live eye view can help you see it; your own eyes are just as good.</p>
     <p><b>Don't test him</b> ("what's this called?"). Every interaction should be real communication, not practice.</p>
     <p><b>If he can't tell you about pain</b>, nurses can assess it by observation (the PAINAD scale) — ask his palliative team to show you what they watch for.</p>
@@ -1072,6 +1077,30 @@ SCREENS.settings = () => {
   test.addEventListener('click', () => speak('Hello, I love you all.'));
   vRow.querySelector('div:last-child').appendChild(test);
   wrap.appendChild(vRow);
+
+  /* real photos on his buttons */
+  const PHOTO_SLOTS = ['Drink', 'Toilet', 'Pain', 'COME HERE', 'Hungry', 'Rest', 'Nurse', 'Coffee', 'Water', 'TV on', 'Blanket', 'My tablets'];
+  const pbRow = el('<div class="set-row"><h3>Real photos on his buttons</h3><label>His recognition of REAL things outlasts symbols and words. Photograph HIS actual mug, HIS chair, the actual toilet door — one object, plain background, good light — and put it on the button. Photos stay on this device.</label><div id="pblist"></div></div>');
+  const pblist = pbRow.querySelector('#pblist');
+  PHOTO_SLOTS.forEach(lbl => {
+    const cur = photoFor(lbl);
+    const r = el('<div class="person-row">' + (cur ? '<img style="border-radius:10px;" src="' + cur + '">' : '<span style="font-size:32px;">🖼️</span>') + '<span class="nm">' + escapeHtml(lbl) + '</span></div>');
+    const fi = el('<input type="file" accept="image/*" style="display:none;">');
+    const add = el('<button class="toggle-btn" style="margin:0;">' + (cur ? 'Change' : 'Add photo') + '</button>');
+    add.addEventListener('click', () => fi.click());
+    fi.addEventListener('change', () => {
+      const f = fi.files && fi.files[0];
+      if (f) shrinkImage(f, d => { S.photoBtns[lbl] = d; save(); show('settings'); });
+    });
+    r.appendChild(add); r.appendChild(fi);
+    if (cur) {
+      const rm = el('<button class="rm">✕</button>');
+      rm.addEventListener('click', () => { delete S.photoBtns[lbl]; save(); show('settings'); });
+      r.appendChild(rm);
+    }
+    pblist.appendChild(r);
+  });
+  wrap.appendChild(pbRow);
 
   /* people */
   const pRow = el('<div class="set-row"><h3>People</h3><label>Add family and friends with a photo. Photos stay on this device only — nothing is uploaded.</label><div id="plist"></div></div>');

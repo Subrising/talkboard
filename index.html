@@ -76,6 +76,7 @@
     border-radius: 50%; object-fit: cover; border: 3px solid #e7e2d8;
   }
   .tile img.pic { width: clamp(60px, 9vw, 100px); height: clamp(60px, 9vw, 100px); object-fit: contain; }
+  .tile img.pic.photo { object-fit: cover; border-radius: 16px; width: clamp(80px, 12vw, 130px); height: clamp(68px, 10vw, 110px); }
   .backbtn {
     background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
     font-size: clamp(18px, 2.6vw, 24px); font-weight: 700; color: var(--muted);
@@ -93,6 +94,7 @@
   #big .em { font-size: clamp(70px, 16vw, 180px); line-height: 1; }
   #big img.face { width: clamp(140px, 24vw, 260px); height: clamp(140px, 24vw, 260px); border-radius: 50%; object-fit: cover; border: 5px solid #fff; }
   #big img.pic { width: clamp(130px, 22vw, 240px); height: clamp(130px, 22vw, 240px); object-fit: contain; background: #fff; border-radius: 24px; padding: 10px; }
+  #big img.pic.photo { object-fit: cover; padding: 0; width: clamp(180px, 30vw, 340px); height: clamp(150px, 24vw, 270px); }
   #big .txt { font-size: clamp(44px, 9vw, 120px); font-weight: 800; line-height: 1.1; }
   #big .row { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
   #big button {
@@ -284,6 +286,6 @@
   </div>
 </div>
 
-<script src="./app.js?v=16"></script>
+<script src="./app.js?v=17"></script>
 </body>
 </html>

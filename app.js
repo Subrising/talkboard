@@ -399,6 +399,51 @@ SCREENS.heart = () => {
   screenEl.appendChild(g);
 };
 
+/* ---- partner-assisted scanning: one option at a time, carer watches for his signal ---- */
+SCREENS.scanPick = () => {
+  screenEl.appendChild(titleRow('One at a time (family/carer)', 'choices'));
+  screenEl.appendChild(el('<div style="font-size:19px;color:var(--muted);margin:0 6px 12px;max-width:640px;">Options appear ONE at a time, big, and spoken. Watch him — any signal (squeeze, blink, nod, sound) means yes: tap <b>That\'s it</b>. No signal: tap <b>Next</b>. Pick which list to go through:</div>'));
+  const g = el('<div class="grid"></div>');
+  [['I need…', 'needs'], ['Everyday', 'everyday'], ['Feelings', 'feelings'], ['From the heart', 'heart'], ['People', 'people']].forEach(([lbl, key]) => {
+    const b = el('<button class="tile nav"><div class="lbl">' + lbl + '</div></button>');
+    b.addEventListener('click', () => show('scan', key));
+    g.appendChild(b);
+  });
+  screenEl.appendChild(g);
+};
+SCREENS.scan = (key) => {
+  const lists = {
+    needs: NEEDS, everyday: EVERYDAY, feelings: FEELINGS, heart: HEART,
+    people: S.people.map(p => ({ em: '🙂', lbl: p.name, say: 'I want to see ' + p.name + '.', photo: p.photo })),
+  };
+  const items = lists[key] || NEEDS;
+  let idx = 0;
+  const card = el('<div style="max-width:720px;margin:0 auto;text-align:center;"></div>');
+  const counter = el('<div class="recent-lbl" style="text-align:center;"></div>');
+  const itemBox = el('<div class="tile" style="min-height:38vh;margin-bottom:14px;"></div>');
+  const row = el('<div style="display:flex;gap:12px;"></div>');
+  const yesB = el('<button class="tile" style="flex:2;min-height:110px;background:var(--green-bg);color:var(--green);"><div class="lbl" style="font-size:clamp(24px,4vw,34px);">✓ That\'s it</div></button>');
+  const nextB = el('<button class="tile" style="flex:1;min-height:110px;"><div class="lbl">Next ›</div></button>');
+  function render() {
+    const it = items[idx];
+    counter.textContent = (idx + 1) + ' of ' + items.length;
+    const visual = it.photo ? '<img class="face" src="' + it.photo + '" alt="">' : tileVisual(it);
+    itemBox.innerHTML = visual + '<div class="lbl" style="font-size:clamp(30px,5vw,48px);">' + escapeHtml(it.lbl) + '</div>';
+    speak(it.say);
+  }
+  yesB.addEventListener('click', () => {
+    const it = items[idx];
+    lastTapAt = 0;                       // bypass double-tap guard: this tap is the carer's, deliberate
+    showBig(it.em, it.lbl, it.say, it.photo || null, it.img || null);
+  });
+  nextB.addEventListener('click', () => { idx = (idx + 1) % items.length; render(); });
+  screenEl.appendChild(titleRow('Watch him, then tap', 'scanPick'));
+  row.appendChild(yesB); row.appendChild(nextB);
+  card.appendChild(counter); card.appendChild(itemBox); card.appendChild(row);
+  screenEl.appendChild(card);
+  render();
+};
+
 /* ---- visual scenes: photo of his real room with tappable spots ---- */
 SCREENS.scenes = () => {
   if (S.scenes.length === 1) { show('sceneView', S.scenes[0]); return; }
@@ -461,6 +506,8 @@ SCREENS.tips = () => {
     <p><b>Offer choices, not open questions.</b> The Choices screen is built for this — you type the options, he picks. Yes/no questions beat "what do you want?"</p>
     <p><b>Watch fatigue.</b> Mornings are often his best window. Keep sessions short and stop at the first signs of tiring. Sitting together in silence counts as communication.</p>
     <p><b>As ability changes, step down the ladder:</b> typing → picture buttons → yes/no → hand squeeze or blink. Agree the hand-squeeze yes/no signal with everyone <i>now</i>, so it's ready if needed.</p>
+    <p><b>Teach through his hands, not through explaining.</b> If instructions aren't landing but repeated physical actions become automatic (like his transfers), use that: guide his hand to tap YES while saying "yes" — ten times, several short sessions a day, one or two buttons only, always the same spot. Guide him <i>before</i> he can get it wrong; never quiz. The movement can become automatic even when the explanation can't. The same method teaches a hand squeeze.</p>
+    <p><b>When choosing between options is too much,</b> use <b>Choices → One at a time</b>: the screen shows and speaks one option at a time, and he only has to give you any yes-signal. You tap, he signals — that's the whole task.</p>
     <p><b>Don't test him</b> ("what's this called?"). Every interaction should be real communication, not practice.</p>
     <p><b>If he can't tell you about pain</b>, nurses can assess it by observation (the PAINAD scale) — ask his palliative team to show you what they watch for.</p>
     <p style="color:var(--muted);font-size:16px;margin-top:24px;">Based on Supported Conversation for Adults with Aphasia (Aphasia Institute), ASHA end-of-life AAC guidance, and Ira Byock's <i>The Four Things That Matter Most</i>. Pictographic symbols © Government of Aragón, author Sergio Palao, ARASAAC (arasaac.org), CC BY-NC-SA.</p>
@@ -514,6 +561,9 @@ SCREENS.people = () => {
 SCREENS.choices = () => {
   screenEl.appendChild(titleRow('Set up a choice (family/carer)', 'home'));
   const wrap = el('<div style="max-width:640px;margin:0 auto;"></div>');
+  const scanBtn = el('<button class="primary-btn" style="margin-bottom:14px;">🔁 One at a time — he just signals yes ›</button>');
+  scanBtn.addEventListener('click', () => show('scanPick'));
+  wrap.appendChild(scanBtn);
   wrap.appendChild(el('<div style="font-size:19px;color:var(--muted);margin-bottom:12px;">Type 2–4 options, tap <b>Show him the choices</b>, then hand over the screen.</div>'));
   const inputs = [];
   for (let i = 0; i < 4; i++) {

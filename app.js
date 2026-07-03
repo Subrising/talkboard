@@ -52,7 +52,8 @@ const REC_VOICES = [
   ['natasha',  'Natasha — Australian, female'],
 ];
 function speak(text) {
-  const file = AUDIO_MAP[text];
+  // tolerate trailing-period drift between button text and recorded phrases
+  const file = AUDIO_MAP[text] || AUDIO_MAP[text + '.'] || AUDIO_MAP[text.replace(/\.$/, '')];
   if (file) {
     try { speechSynthesis.cancel(); } catch (e) {}
     player.pause();
@@ -66,9 +67,11 @@ function speak(text) {
 function speakTTS(text) {
   if (typeof speechSynthesis === 'undefined') return;
   speechSynthesis.cancel();
+  loadVoices();                          // iOS loads the voice list late; refresh before picking
   const u = new SpeechSynthesisUtterance(text);
   const v = pickVoice();
   if (v) u.voice = v;
+  u.lang = v ? v.lang : 'en-AU';         // never let it fall to a non-English system default
   u.rate = S.rate;
   speechSynthesis.speak(u);
 }

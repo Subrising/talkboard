@@ -407,6 +407,24 @@ SCREENS.heart = () => {
   screenEl.appendChild(g);
 };
 
+/* ---- tap anywhere = YES: no aiming, any touch is the signal ---- */
+SCREENS.tapYes = () => {
+  const wrap = el('<div style="position:fixed;inset:0;z-index:40;background:var(--green-bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3vh;"></div>');
+  const exit = el('<button class="backbtn" style="position:absolute;top:10px;left:10px;">‹ Done</button>');
+  exit.addEventListener('click', e => { e.stopPropagation(); wrap.remove(); show('home'); });
+  wrap.appendChild(exit);
+  wrap.appendChild(el('<div style="font-size:clamp(18px,2.6vw,24px);color:var(--muted);">Ask him a yes/no question out loud, then hand him the screen.</div>'));
+  wrap.appendChild(el('<div style="font-size:clamp(60px,14vw,160px);font-weight:800;color:var(--green);">TOUCH = YES</div>'));
+  const said = el('<div style="font-size:clamp(26px,4vw,40px);font-weight:700;color:var(--green);min-height:1.3em;"></div>');
+  wrap.appendChild(said);
+  wrap.addEventListener('click', () => {
+    speak('Yes');
+    said.textContent = '✓ He said YES';
+    setTimeout(() => { said.textContent = ''; }, 4000);
+  });
+  document.body.appendChild(wrap);
+};
+
 /* ---- eye pointing: options at screen extremes, family reads his gaze ---- */
 SCREENS.eyeShow = (opts) => {
   screenEl.appendChild(titleRow('Watch his eyes, tap what they choose', 'choices'));
@@ -659,9 +677,12 @@ SCREENS.people = () => {
 SCREENS.choices = () => {
   screenEl.appendChild(titleRow('Set up a choice (family/carer)', 'home'));
   const wrap = el('<div style="max-width:640px;margin:0 auto;"></div>');
-  const scanBtn = el('<button class="primary-btn" style="margin-bottom:14px;">🔁 One at a time — he just signals yes ›</button>');
+  const scanBtn = el('<button class="primary-btn" style="margin-bottom:10px;">🔁 One at a time — he just signals yes ›</button>');
   scanBtn.addEventListener('click', () => show('scanPick'));
   wrap.appendChild(scanBtn);
+  const tapBtn = el('<button class="primary-btn" style="margin-bottom:14px;background:var(--green);">✋ Tap anywhere = YES (no aiming) ›</button>');
+  tapBtn.addEventListener('click', () => show('tapYes'));
+  wrap.appendChild(tapBtn);
   wrap.appendChild(el('<div style="font-size:19px;color:var(--muted);margin-bottom:12px;">Type 2–4 options, tap <b>Show him the choices</b>, then hand over the screen.</div>'));
   const inputs = [];
   for (let i = 0; i < 4; i++) {

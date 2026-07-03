@@ -19,6 +19,7 @@ const DEFAULTS = {
   choiceSets: [],
   recVoice: 'william',
   theme: 'auto',
+  showType: false,
   phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'],
 };
 let S = load();
@@ -57,7 +58,10 @@ function speak(text) {
   if (file) {
     try { speechSynthesis.cancel(); } catch (e) {}
     player.pause();
-    player.src = './audio/' + (S.recVoice || 'william') + '/' + file;
+    // map values are william-relative full paths (keeps old cached clients working);
+    // swap the voice directory for the selected voice
+    const vdir = S.recVoice || 'william';
+    player.src = './' + file.replace('audio/william/', 'audio/' + vdir + '/');
     player.currentTime = 0;
     player.play().catch(() => speakTTS(text));
     return;
@@ -285,6 +289,7 @@ function titleRow(text, backTo) {
 
 const SCREENS = {};
 function show(name, arg) {
+  if (typeof stopCam === 'function' && name !== 'eyeCam') stopCam();
   screenEl.innerHTML = '';
   screenEl.scrollTop = 0;
   SCREENS[name](arg);
@@ -349,7 +354,7 @@ SCREENS.home = () => {
     g.appendChild(navTile('👨‍👩‍👧', 'People', 'people', 'c-people'));
     if (S.scenes && S.scenes.length) g.appendChild(navTile('🖼️', 'My room', 'scenes', 'c-people'));
     g.appendChild(navTile('🔀', 'Choices', 'choices'));
-    g.appendChild(navTile('⌨️', 'Type', 'talk'));
+    if (S.showType) g.appendChild(navTile('⌨️', 'Type', 'talk'));
   }
   screenEl.appendChild(g);
 };
@@ -401,6 +406,95 @@ SCREENS.heart = () => {
   HEART.forEach(h => g.appendChild(tileBtn(h, 'c-heart')));
   screenEl.appendChild(g);
 };
+
+/* ---- eye pointing: options at screen extremes, family reads his gaze ---- */
+SCREENS.eyeShow = (opts) => {
+  screenEl.appendChild(titleRow('Watch his eyes, tap what they choose', 'choices'));
+  screenEl.appendChild(el('<div style="font-size:18px;color:var(--muted);text-align:center;margin-bottom:2vh;">Hold the screen facing him at eye level, ~50 cm away. Say: "Look at the one you want."</div>'));
+  const wrap = el('<div style="display:grid;grid-template-columns:1fr 1fr;column-gap:16vw;row-gap:6vh;align-items:center;min-height:52vh;"></div>');
+  opts.slice(0, 4).forEach(o => {
+    const b = el('<button class="tile" style="min-height:24vh;"><div class="lbl" style="font-size:clamp(28px,4.5vw,44px);">' + escapeHtml(o) + '</div></button>');
+    b.addEventListener('click', () => showBig('👀', o, o));
+    wrap.appendChild(b);
+  });
+  screenEl.appendChild(wrap);
+};
+
+/* ---- live eye view: front camera + on-device iris tracking, left/right dwell ---- */
+let camStream = null, camRunning = false;
+function stopCam() {
+  camRunning = false;
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+}
+SCREENS.eyeCam = (opts) => {
+  stopCam();
+  const [optL, optR] = opts;
+  let swap = false;
+  const tr = titleRow('Live eye view', 'choices');
+  screenEl.appendChild(tr);
+  const status = el('<div style="font-size:18px;color:var(--muted);text-align:center;margin-bottom:8px;">Starting camera…</div>');
+  const video = el('<video autoplay playsinline muted style="width:180px;border-radius:14px;display:block;margin:0 auto 10px;transform:scaleX(-1);"></video>');
+  const row = el('<div style="display:flex;gap:10vw;min-height:46vh;"></div>');
+  const mk = txt => el('<button class="tile" style="flex:1;min-height:44vh;transition:background .2s,outline .2s;"><div class="lbl" style="font-size:clamp(28px,4.5vw,44px);">' + escapeHtml(txt) + '</div></button>');
+  const panL = mk(optL), panR = mk(optR);
+  panL.addEventListener('click', () => showBig('👀', optL, optL));
+  panR.addEventListener('click', () => showBig('👀', optR, optR));
+  row.appendChild(panL); row.appendChild(panR);
+  const swapB = el('<button class="toggle-btn" style="display:block;margin:12px auto 0;">⇄ Swap sides (if the highlight is backwards)</button>');
+  swapB.addEventListener('click', () => { swap = !swap; });
+  screenEl.appendChild(status); screenEl.appendChild(video); screenEl.appendChild(row); screenEl.appendChild(swapB);
+
+  const votes = [];
+  function highlight(side) {
+    panL.style.outline = side === 'L' ? '8px solid var(--green)' : 'none';
+    panR.style.outline = side === 'R' ? '8px solid var(--green)' : 'none';
+  }
+  (async () => {
+    try {
+      status.textContent = 'Loading eye model… (needs internet the first time)';
+      const vision = await import('./vendor/vision_bundle.mjs');
+      const fileset = await vision.FilesetResolver.forVisionTasks('./vendor/wasm');
+      const lm = await vision.FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: './vendor/face_landmarker.task' },
+        runningMode: 'VIDEO', numFaces: 1,
+      });
+      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      video.srcObject = camStream;
+      camRunning = true;
+      status.textContent = 'Watching — the green outline follows his eyes. Tap a side to confirm.';
+      const loop = () => {
+        if (!camRunning) return;
+        if (video.readyState >= 2) {
+          const res = lm.detectForVideo(video, performance.now());
+          const f = res.faceLandmarks && res.faceLandmarks[0];
+          if (f) {
+            // iris position within each eye: 0 = image-left corner, 1 = image-right corner
+            const r1 = irisRatio(f, 468, 33, 133);
+            const r2 = irisRatio(f, 473, 362, 263);
+            const r = (r1 + r2) / 2;
+            // iris toward image-right = he is looking toward HIS left = screen-left option
+            let side = r > 0.58 ? 'L' : r < 0.42 ? 'R' : null;
+            if (side && swap) side = side === 'L' ? 'R' : 'L';
+            votes.push(side);
+            if (votes.length > 14) votes.shift();
+            const l = votes.filter(v => v === 'L').length, ri = votes.filter(v => v === 'R').length;
+            highlight(l >= 9 ? 'L' : ri >= 9 ? 'R' : null);
+          } else {
+            highlight(null);
+          }
+        }
+        requestAnimationFrame(loop);
+      };
+      loop();
+    } catch (e) {
+      status.textContent = "Camera view couldn't start (" + (e && e.message ? e.message : e) + '). Use the no-camera eye pointing instead — your eyes reading his work just as well.';
+    }
+  })();
+};
+function irisRatio(f, iris, cA, cB) {
+  const xmin = Math.min(f[cA].x, f[cB].x), xmax = Math.max(f[cA].x, f[cB].x);
+  return xmax > xmin ? (f[iris].x - xmin) / (xmax - xmin) : 0.5;
+}
 
 /* ---- partner-assisted scanning: one option at a time, carer watches for his signal ---- */
 SCREENS.scanPick = () => {
@@ -511,6 +605,7 @@ SCREENS.tips = () => {
     <p><b>As ability changes, step down the ladder:</b> typing → picture buttons → yes/no → hand squeeze or blink. Agree the hand-squeeze yes/no signal with everyone <i>now</i>, so it's ready if needed.</p>
     <p><b>Teach through his hands, not through explaining.</b> If instructions aren't landing but repeated physical actions become automatic (like his transfers), use that: guide his hand to tap YES while saying "yes" — ten times, several short sessions a day, one or two buttons only, always the same spot. Guide him <i>before</i> he can get it wrong; never quiz. The movement can become automatic even when the explanation can't. The same method teaches a hand squeeze.</p>
     <p><b>When choosing between options is too much,</b> use <b>Choices → One at a time</b>: the screen shows and speaks one option at a time, and he only has to give you any yes-signal. You tap, he signals — that's the whole task.</p>
+    <p><b>His eyes still point.</b> Choices → Eye pointing puts options at opposite sides — hold the screen facing him at eye level and watch where his eyes go, then tap it for him. Looking at what you want needs no instructions at all. The camera Live eye view can help you see it; your own eyes are just as good.</p>
     <p><b>Don't test him</b> ("what's this called?"). Every interaction should be real communication, not practice.</p>
     <p><b>If he can't tell you about pain</b>, nurses can assess it by observation (the PAINAD scale) — ask his palliative team to show you what they watch for.</p>
     <p style="color:var(--muted);font-size:16px;margin-top:24px;">Based on Supported Conversation for Adults with Aphasia (Aphasia Institute), ASHA end-of-life AAC guidance, and Ira Byock's <i>The Four Things That Matter Most</i>. Pictographic symbols © Government of Aragón, author Sergio Palao, ARASAAC (arasaac.org), CC BY-NC-SA.</p>
@@ -590,17 +685,24 @@ SCREENS.choices = () => {
     });
     wrap.appendChild(recRow);
   }
-  const go = el('<button class="primary-btn">Show him the choices ›</button>');
-  go.addEventListener('click', () => {
+  function getOpts() {
     const opts = inputs.map(i => i.value.trim()).filter(Boolean);
     if (opts.length >= 2) {
       const key = JSON.stringify(opts);
       S.choiceSets = [opts].concat((S.choiceSets || []).filter(s => JSON.stringify(s) !== key)).slice(0, 5);
       save();
-      show('choicesShow', opts);
     }
-  });
+    return opts;
+  }
+  const go = el('<button class="primary-btn">Show him the choices (tap) ›</button>');
+  go.addEventListener('click', () => { const o = getOpts(); if (o.length >= 2) show('choicesShow', o); });
   wrap.appendChild(go);
+  const eyeB = el('<button class="primary-btn" style="background:#5a3f8f;">👀 Eye pointing — he looks, you tap ›</button>');
+  eyeB.addEventListener('click', () => { const o = getOpts(); if (o.length >= 2) show('eyeShow', o); });
+  wrap.appendChild(eyeB);
+  const camB = el('<button class="primary-btn" style="background:#245c50;">📷 Live eye view (camera, first 2 options) ›</button>');
+  camB.addEventListener('click', () => { const o = getOpts(); if (o.length >= 2) show('eyeCam', o.slice(0, 2)); });
+  wrap.appendChild(camB);
   screenEl.appendChild(wrap);
 };
 SCREENS.choicesShow = (opts) => {
@@ -710,6 +812,16 @@ SCREENS.settings = () => {
     thBtns.appendChild(b);
   });
   wrap.appendChild(thRow);
+
+  /* typing screen */
+  const tyRow = el('<div class="set-row"><h3>Typing screen</h3><label>Hidden by default — typing asks a lot. Turn it on for a sharp window.</label><div></div></div>');
+  const tyBtns = tyRow.querySelector('div:last-child');
+  [[false, 'Hidden'], [true, 'Shown']].forEach(([v, lbl]) => {
+    const b = el('<button class="toggle-btn' + (S.showType === v ? ' on' : '') + '">' + lbl + '</button>');
+    b.addEventListener('click', () => { S.showType = v; save(); show('settings'); });
+    tyBtns.appendChild(b);
+  });
+  wrap.appendChild(tyRow);
 
   /* layout */
   const lyRow = el('<div class="set-row"><h3>Layout</h3><label>If he only notices things on the LEFT side of the screen (common after a left-side brain injury), switch to one column — everything lines up down the left where he can see and reach it.</label><div></div></div>');

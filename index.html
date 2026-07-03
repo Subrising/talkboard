@@ -48,6 +48,10 @@
     font-weight: 800; min-height: 88px;
   }
   #btn-yes { flex: 3; background: var(--green-bg); color: var(--green); font-size: clamp(30px, 6vw, 52px); }
+  /* image-dominant overlay in his modes: picture huge, word secondary */
+  #big.lite .em { font-size: clamp(110px, 26vw, 300px); }
+  #big.lite .txt { font-size: clamp(34px, 6.5vw, 84px); }
+  #big.lite img.pic { width: clamp(200px, 36vw, 420px); height: clamp(170px, 30vw, 350px); }
   #btn-no  { flex: 3; background: var(--red-bg);  color: var(--red);  font-size: clamp(30px, 6vw, 52px); }
   #btn-again { flex: 1; background: var(--blue-bg); color: var(--blue); font-size: clamp(24px, 4vw, 36px); }
   #btn-home { flex: 1; background: var(--card); color: var(--muted); font-size: clamp(24px, 4vw, 36px); }
@@ -266,8 +270,8 @@
 <body>
 
 <div id="topbar">
-  <button id="btn-yes">✓ YES</button>
-  <button id="btn-no">✗ NO</button>
+  <button id="btn-yes">👍 YES</button>
+  <button id="btn-no">👎 NO</button>
   <button id="btn-again" title="Say that again">🔊</button>
   <button id="btn-home">🏠</button>
 </div>
@@ -286,6 +290,6 @@
   </div>
 </div>
 
-<script src="./app.js?v=17"></script>
+<script src="./app.js?v=18"></script>
 </body>
 </html>

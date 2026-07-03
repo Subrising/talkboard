@@ -135,8 +135,8 @@ document.getElementById('big-close').addEventListener('click', () => big.classLi
 big.addEventListener('click', e => { if (big.classList.contains('lite') || e.target === big) big.classList.remove('show'); });
 
 /* ================= top bar ================= */
-document.getElementById('btn-yes').addEventListener('click', () => showBig('✓', 'YES', 'Yes'));
-document.getElementById('btn-no').addEventListener('click', () => showBig('✗', 'NO', 'No'));
+document.getElementById('btn-yes').addEventListener('click', () => showBig('👍', 'YES', 'Yes'));
+document.getElementById('btn-no').addEventListener('click', () => showBig('👎', 'NO', 'No'));
 document.getElementById('btn-again').addEventListener('click', () => { if (lastSpoken) speak(lastSpoken); });
 document.getElementById('btn-home').addEventListener('click', () => show('home'));
 (() => {  // gear: hold ~0.6s to open — a stray tap must not land him in Settings
@@ -331,10 +331,10 @@ SCREENS.home = () => {
   const painItem = { em: '🤕', img: I('pain'), lbl: 'Pain' };
   if (S.mode === 'yesno') {
     g.style.gridTemplateColumns = 'repeat(2, 1fr)';
-    const yes = el('<button class="tile" style="min-height:34vh;background:var(--green-bg);color:var(--green);"><div class="em">✓</div><div class="lbl" style="font-size:clamp(30px,5vw,48px);">YES</div></button>');
-    yes.addEventListener('click', () => showBig('✓', 'YES', 'Yes'));
-    const no = el('<button class="tile" style="min-height:34vh;background:var(--red-bg);color:var(--red);"><div class="em">✗</div><div class="lbl" style="font-size:clamp(30px,5vw,48px);">NO</div></button>');
-    no.addEventListener('click', () => showBig('✗', 'NO', 'No'));
+    const yes = el('<button class="tile" style="min-height:34vh;background:var(--green-bg);color:var(--green);"><div class="em">👍</div><div class="lbl" style="font-size:clamp(30px,5vw,48px);">YES</div></button>');
+    yes.addEventListener('click', () => showBig('👍', 'YES', 'Yes'));
+    const no = el('<button class="tile" style="min-height:34vh;background:var(--red-bg);color:var(--red);"><div class="em">👎</div><div class="lbl" style="font-size:clamp(30px,5vw,48px);">NO</div></button>');
+    no.addEventListener('click', () => showBig('👎', 'NO', 'No'));
     const pain = el('<button class="tile warn" style="min-height:34vh;">' + tileVisual(painItem) + '<div class="lbl" style="font-size:clamp(30px,5vw,48px);">PAIN</div></button>');
     pain.addEventListener('click', () => showBig('🤕', 'PAIN', "I'm in pain", null, I('pain')));
     const need = el('<button class="tile" style="min-height:34vh;">' + tileVisual({ em: '❓', img: I('question') }) + '<div class="lbl" style="font-size:clamp(30px,5vw,48px);">HELP</div></button>');
@@ -437,7 +437,8 @@ SCREENS.tapYes = () => {
   exit.addEventListener('click', e => { e.stopPropagation(); wrap.remove(); show('home'); });
   wrap.appendChild(exit);
   wrap.appendChild(el('<div style="font-size:clamp(18px,2.6vw,24px);color:var(--muted);">Ask him a yes/no question out loud, then hand him the screen.</div>'));
-  wrap.appendChild(el('<div style="font-size:clamp(60px,14vw,160px);font-weight:800;color:var(--green);">TOUCH = YES</div>'));
+  wrap.appendChild(el('<div style="font-size:clamp(80px,20vw,220px);line-height:1;">👍</div>'));
+  wrap.appendChild(el('<div style="font-size:clamp(40px,9vw,110px);font-weight:800;color:var(--green);">TOUCH = YES</div>'));
   const said = el('<div style="font-size:clamp(26px,4vw,40px);font-weight:700;color:var(--green);min-height:1.3em;"></div>');
   wrap.appendChild(said);
   wrap.addEventListener('click', () => {
@@ -536,6 +537,18 @@ function irisRatio(f, iris, cA, cB) {
   const xmin = Math.min(f[cA].x, f[cB].x), xmax = Math.max(f[cA].x, f[cB].x);
   return xmax > xmin ? (f[iris].x - xmin) / (xmax - xmin) : 0.5;
 }
+
+/* ---- how to enable iPadOS eye tracking ---- */
+SCREENS.eyeHelp = () => {
+  screenEl.appendChild(titleRow("iPad's built-in eye tracking", 'ask'));
+  screenEl.appendChild(el(`<div style="max-width:680px;margin:0 auto;font-size:20px;line-height:1.55;-webkit-user-select:text;user-select:text;">
+    <p><b>Works on:</b> iPad 8th generation or newer (incl. 9th and 10th gen), running <b>iPadOS 18 or later</b>. If you can't find the menu below, update the iPad first: Settings → General → Software Update.</p>
+    <p><b>Turn it on:</b> Settings → Accessibility → scroll to <i>Physical and Motor</i> → <b>Eye Tracking</b> → switch on.</p>
+    <p><b>Calibration:</b> the iPad shows a bright dot that moves around the screen. Hold the iPad steady about 45&nbsp;cm from his face (prop it — don't handhold) and let him watch the dot. A bright moving dot grabs attention on its own, so he may pass without needing to understand anything. It takes ~15 seconds.</p>
+    <p><b>If it works:</b> a pointer follows his eyes everywhere in this app, and resting his gaze on a button taps it (that's "Dwell"). Turn the dwell time UP (3–4 seconds) in the same settings so glances don't mis-fire.</p>
+    <p><b>If calibration doesn't take</b> — likely, and fine — use Eye pointing here instead: you read his eyes, and yours don't need calibrating.</p>
+  </div>`));
+};
 
 /* ---- partner-assisted scanning: one option at a time, carer watches for his signal ---- */
 SCREENS.scanPick = () => {
@@ -763,6 +776,7 @@ SCREENS.ask = () => {
   card('👀', 'Eye pointing', 'When tapping is too hard: hold the screen up, he looks, you tap it for him.', () => show('choiceSetup', 'eye'));
   card('🔀', 'He taps a choice', 'Good windows only: 2–4 big options he taps himself.', () => show('choiceSetup', 'tap'));
   card('📷', 'Live eye view', "Only if you can't read his eyes yourself — the camera highlights the side he looks at.", () => show('choiceSetup', 'cam'));
+  card('ℹ️', "iPad's built-in eye tracking", 'How to turn on the pointer-follows-his-eyes feature in iPad settings.', () => show('eyeHelp'));
   screenEl.appendChild(wrap);
 };
 

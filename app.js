@@ -24,6 +24,7 @@ const DEFAULTS = {
   photoBtns: {},
   phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'],
   signals: [],
+  sounds: [],
 };
 let S = load();
 function load() {
@@ -361,6 +362,7 @@ function applyChrome() {
 }
 function show(name, arg) {
   if (typeof stopCam === 'function' && name !== 'eyeCam') stopCam();
+  if (typeof stopMic === 'function') stopMic();
   stopReadAloud();
   applyChrome();
   screenEl.innerHTML = '';
@@ -540,6 +542,125 @@ SCREENS.signals = () => {
     wrap.appendChild(el('<div class="tile" style="width:100%;min-height:0;padding:18px;margin-bottom:10px;flex-direction:row;gap:14px;justify-content:flex-start;"><div class="lbl" style="font-size:clamp(22px,3.4vw,30px);">' + escapeHtml(sg.sig) + '</div><div style="font-size:clamp(22px,3.4vw,30px);color:var(--muted);">→</div><div class="lbl" style="font-size:clamp(22px,3.4vw,30px);color:var(--green);">' + escapeHtml(sg.means) + '</div></div>'));
   });
   screenEl.appendChild(wrap);
+};
+
+/* ---- his sounds: learn HIS repeatable sounds and match them to phrases.
+   Voiceitt-style closed-set matching, but fully on-device and offline: sounds are
+   stored as small spectral fingerprints (never raw audio, never uploaded). ---- */
+let micStream = null, micRunning = false;
+function stopMic() {
+  micRunning = false;
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+}
+/* listen for one vocalisation and return its fingerprint: 20 spectral bands + duration + pitch slope */
+async function captureSound(onStatus, onDone) {
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  await ac.resume();
+  micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const an = ac.createAnalyser();
+  an.fftSize = 1024; an.smoothingTimeConstant = 0.3;
+  ac.createMediaStreamSource(micStream).connect(an);
+  const bins = an.frequencyBinCount, buf = new Uint8Array(bins);
+  const frames = [];
+  let noise = 0.08, quiet = 0, capturing = false, t0 = 0;
+  micRunning = true;
+  onStatus('listening');
+  const tick = () => {
+    if (!micRunning) { ac.close().catch(() => {}); return; }
+    an.getByteFrequencyData(buf);
+    let e = 0; for (let i = 2; i < 220; i++) e += buf[i];
+    e /= (218 * 255);
+    if (!capturing) {
+      noise = Math.min(noise * 0.98 + e * 0.02, 0.2);
+      if (e > noise * 2 + 0.045) { capturing = true; t0 = performance.now(); onStatus('hearing'); }
+    }
+    if (capturing) {
+      frames.push(Array.prototype.slice.call(buf));
+      if (e < noise * 1.5 + 0.02) quiet++; else quiet = 0;
+      const dur = (performance.now() - t0) / 1000;
+      if ((quiet > 14 && dur > 0.25) || dur > 3) {
+        stopMic(); ac.close().catch(() => {});
+        onDone(fingerprint(frames.slice(0, Math.max(1, frames.length - quiet)), dur));
+        return;
+      }
+    }
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
+function fingerprint(frames, dur) {
+  const BANDS = 20, half = frames[0].length;
+  const spec = new Array(BANDS).fill(0);
+  const centroid = f => {
+    let s = 0, w = 0;
+    for (let i = 2; i < 300; i++) { s += f[i]; w += f[i] * i; }
+    return s > 0 ? w / s : 0;
+  };
+  frames.forEach(f => {
+    for (let b = 0; b < BANDS; b++) {
+      // log-spaced band edges over the lower half of the spectrum (voice range)
+      const lo = Math.floor(Math.pow(half / 2, b / BANDS)), hi = Math.max(lo + 1, Math.floor(Math.pow(half / 2, (b + 1) / BANDS)));
+      let s = 0; for (let i = lo; i < hi; i++) s += f[i];
+      spec[b] += s / (hi - lo);
+    }
+  });
+  let norm = Math.sqrt(spec.reduce((a, v) => a + v * v, 0)) || 1;
+  const third = Math.max(1, Math.floor(frames.length / 3));
+  const slope = (centroidAvg(frames.slice(-third)) - centroidAvg(frames.slice(0, third))) / 100;
+  function centroidAvg(fs) { return fs.reduce((a, f) => a + centroid(f), 0) / fs.length; }
+  return { spec: spec.map(v => +(v / norm).toFixed(4)), dur: +dur.toFixed(2), slope: +slope.toFixed(3) };
+}
+function soundDist(a, b) {
+  let dot = 0;
+  for (let i = 0; i < a.spec.length; i++) dot += a.spec[i] * b.spec[i];
+  return (1 - dot) + Math.min(1, Math.abs(a.dur - b.dur) / 1.5) * 0.35 + Math.min(1, Math.abs(a.slope - b.slope)) * 0.25;
+}
+function matchSound(fp) {
+  const scored = S.sounds
+    .filter(s => s.samples.length)
+    .map(s => ({ s, d: Math.min.apply(null, s.samples.map(x => soundDist(fp, x))) }))
+    .sort((x, y) => x.d - y.d);
+  if (!scored.length) return null;
+  const best = scored[0], second = scored[1];
+  return { sound: best.s, d: best.d, sure: best.d < 0.35 && (!second || second.d - best.d > 0.08) };
+}
+
+SCREENS.hisSounds = () => {
+  screenEl.appendChild(titleRow('His sounds (experimental)', 'ask'));
+  const wrap = el('<div style="max-width:680px;margin:0 auto;text-align:center;"></div>');
+  const trained = S.sounds.filter(s => s.samples.length >= 2);
+  if (trained.length < 2) {
+    wrap.appendChild(el('<div style="font-size:20px;color:var(--muted);line-height:1.5;text-align:left;">Teach the app at least TWO of his sounds first (⚙️ Settings → <b>His sounds</b> → record 3–5 samples of each). Then this screen listens and shows its best guess at what he means — you confirm with him. It only ever suggests; he stays in charge.</div>'));
+    screenEl.appendChild(wrap); return;
+  }
+  const status = el('<div style="font-size:22px;color:var(--muted);min-height:1.4em;margin:8px 0;">Starting microphone…</div>');
+  const guess = el('<div class="tile" style="min-height:30vh;margin:6px 0 12px;"></div>');
+  const btnRow = el('<div style="display:flex;gap:12px;justify-content:center;"></div>');
+  wrap.appendChild(status); wrap.appendChild(guess); wrap.appendChild(btnRow);
+  screenEl.appendChild(wrap);
+  let current = null;
+  function listen() {
+    guess.innerHTML = '<div class="lbl" style="color:var(--muted);">Waiting for a sound…</div>';
+    btnRow.innerHTML = '';
+    captureSound(
+      st => { status.textContent = st === 'hearing' ? '👂 Hearing him…' : '🎙️ Listening — quiet room works best'; },
+      fp => {
+        const m = matchSound(fp);
+        current = m;
+        if (!m) { listen(); return; }
+        guess.innerHTML = '<div style="font-size:16px;color:var(--muted);letter-spacing:.05em;">' + (m.sure ? 'SOUNDS LIKE' : 'MAYBE — not sure') + '</div>' +
+          '<div class="lbl" style="font-size:clamp(30px,5vw,46px);">' + escapeHtml(m.sound.name) + '</div>' +
+          '<div style="font-size:clamp(20px,3vw,28px);color:var(--green);font-weight:700;">“' + escapeHtml(m.sound.say) + '”</div>';
+        const yes = el('<button class="tile" style="flex:2;min-height:90px;background:var(--green-bg);color:var(--green);"><div class="lbl">✓ That\'s it — say it</div></button>');
+        yes.addEventListener('click', () => { lastTapAt = 0; showBig('👂', m.sound.say, m.sound.say); setTimeout(listen, 400); });
+        const no = el('<button class="tile" style="flex:1;min-height:90px;"><div class="lbl">✗ No — listen again</div></button>');
+        no.addEventListener('click', listen);
+        btnRow.appendChild(yes); btnRow.appendChild(no);
+        status.textContent = 'Check with him, then tap.';
+      }
+    ).catch(() => { status.textContent = "Microphone couldn't start — check the browser's mic permission for this site."; });
+  }
+  listen();
 };
 
 /* ---- eye pointing: options at screen extremes, family reads his gaze ---- */
@@ -869,6 +990,7 @@ SCREENS.ask = () => {
   card('✋', 'Tap anywhere = YES', 'One yes/no question out loud: any touch means YES. No aiming.', () => show('tapYes'));
   card('🔢', 'Tap code', 'Taps anywhere ARE the message: 1 = yes, 2 = no, 3 = come here, hold = pain. Reminder cards stay on screen.', () => show('tapCode'));
   card('🤝', 'Our signals', "The family's dictionary of his own signals (squeeze, look, sound) — so everyone reads him the same way.", () => show('signals'));
+  card('👂', 'His sounds', 'Experimental: the app learns his repeatable sounds and guesses what he means — you confirm. Teach it in Settings first.', () => show('hisSounds'));
   card('👀', 'Eye pointing', 'When tapping is too hard: hold the screen up, he looks, you tap it for him.', () => show('choiceSetup', 'eye'));
   card('🔀', 'He taps a choice', 'Good windows only: 2–4 big options he taps himself.', () => show('choiceSetup', 'tap'));
   card('📷', 'Live eye view', "Only if you can't read his eyes yourself — the camera highlights the side he looks at.", () => show('choiceSetup', 'cam'));
@@ -1132,6 +1254,38 @@ SCREENS.settings = () => {
   });
   sgBox.appendChild(sigIn); sgBox.appendChild(meanIn); sgBox.appendChild(sgAdd);
   wrap.appendChild(sgRow);
+
+  /* his sounds trainer */
+  const snRow = el('<div class="set-row"><h3>His sounds (experimental)</h3><label>If he makes the SAME sound for the same thing, teach it here: add the sound, then record 3–5 samples of him making it (quiet room). Then Ask him → <b>His sounds</b> listens and guesses. Sounds are stored as tiny fingerprints on this device only — no audio is kept or uploaded.</label><div id="snlist"></div><div></div></div>');
+  const snlist = snRow.querySelector('#snlist');
+  const snStatus = el('<div style="font-size:17px;color:var(--blue);font-weight:700;min-height:1.3em;margin-top:6px;"></div>');
+  S.sounds.forEach((sn, idx) => {
+    const r = el('<div class="person-row"><span class="nm">' + escapeHtml(sn.name) + ' → “' + escapeHtml(sn.say) + '” <span style="color:var(--muted);font-weight:600;">(' + sn.samples.length + ' sample' + (sn.samples.length === 1 ? '' : 's') + ')</span></span></div>');
+    const rec = el('<button class="toggle-btn" style="margin:0;">🎙️ Record</button>');
+    rec.addEventListener('click', () => {
+      snStatus.textContent = '🎙️ Listening — have him make the "' + sn.name + '" sound now…';
+      captureSound(
+        st => { if (st === 'hearing') snStatus.textContent = '👂 Hearing it…'; },
+        fp => { sn.samples.push(fp); save(); show('settings'); }
+      ).catch(() => { snStatus.textContent = "Microphone couldn't start — check mic permission for this site."; });
+    });
+    const rm = el('<button class="rm">✕</button>');
+    rm.addEventListener('click', () => { if (confirm('Remove "' + sn.name + '" and its samples?')) { S.sounds.splice(idx, 1); save(); show('settings'); } });
+    r.appendChild(rec); r.appendChild(rm);
+    snlist.appendChild(r);
+  });
+  snlist.appendChild(snStatus);
+  const snBox = snRow.querySelector('div:last-child');
+  const snName = el('<input class="choice-input" style="margin-top:10px;" placeholder="The sound (e.g. Long hum)">');
+  const snSay = el('<input class="choice-input" placeholder="What it means — spoken aloud (e.g. I want company)">');
+  const snAdd = el('<button class="toggle-btn">＋ Add sound</button>');
+  snAdd.addEventListener('click', () => {
+    const name = snName.value.trim(), say = snSay.value.trim();
+    if (!name || !say) { alert('Fill in the sound and what it means.'); return; }
+    S.sounds.push({ name, say, samples: [] }); save(); show('settings');
+  });
+  snBox.appendChild(snName); snBox.appendChild(snSay); snBox.appendChild(snAdd);
+  wrap.appendChild(snRow);
 
   /* tips */
   const tipsRow = el('<div class="set-row"><h3>Talking with him</h3><label>Short, practical tips from aphasia and palliative-care specialists.</label><div style="margin-top:10px;"></div></div>');

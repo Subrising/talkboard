@@ -89,6 +89,19 @@
   .grid.fill2 .tile img.pic.photo { width: min(60vw, 44vh); height: min(46vw, 30vh); }
   .grid.fill2 .tile .em { font-size: min(24vw, 24vh); }
   .grid.fill2 .tile .lbl { font-size: clamp(24px, 4.2vh, 40px); }
+  /* 5+ tiles: more columns on wide screens, slightly smaller so it still fits without scrolling */
+  .grid.fill2.many { grid-template-columns: repeat(auto-fit, minmax(min(46%, 270px), 1fr)); }
+  .grid.fill2.many .tile { min-height: 22vh; }
+  .grid.fill2.many .tile img.pic { width: min(22vw, 20vh); height: min(22vw, 17vh); }
+  .grid.fill2.many .tile img.pic.photo { width: min(28vw, 26vh); height: min(22vw, 17vh); }
+  .grid.fill2.many .tile .em { font-size: min(15vw, 14vh); }
+  .grid.fill2.many .tile .lbl { font-size: clamp(20px, 3.2vh, 32px); }
+  @media (orientation: landscape) and (min-width: 700px) {
+    .grid.fill2.many .tile { min-height: 33vh; }
+    .grid.fill2.many .tile img.pic { width: min(22vw, 25vh); height: min(22vw, 22vh); }
+    .grid.fill2.many .tile img.pic.photo { width: min(28vw, 32vh); height: min(22vw, 22vh); }
+    .grid.fill2.many .tile .em { font-size: min(15vw, 18vh); }
+  }
   .backbtn {
     background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
     font-size: clamp(18px, 2.6vw, 24px); font-weight: 700; color: var(--muted);

@@ -23,6 +23,7 @@ const DEFAULTS = {
   setupDone: false,
   photoBtns: {},
   phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'],
+  signals: [],
 };
 let S = load();
 function load() {
@@ -91,6 +92,7 @@ let lastSpoken = '';
 let lastTapAt = 0;
 let bigTimer = null;
 function showBig(icon, text, speakText, photo, pic) {
+  if (typeof stopReadAloud === 'function') stopReadAloud();
   const now = Date.now();
   if (now - lastTapAt < (S.mode === 'full' ? 300 : 1000)) return;   // tremor guard; longer in his modes
   lastTapAt = now;
@@ -245,6 +247,24 @@ const SAYINGS = [
   { em: '😉', lbl: 'I know',            say: 'I know' },
   { em: '💬', img: I('talk'),  lbl: 'Tell me about your day', say: 'Tell me about your day' },
 ];
+/* conversation moves, not needs: with good comprehension he can hold up his end
+   of a chat if the board gives him listener turns (AAC "small talk" comment sets) */
+const CHAT = [
+  { em: '💬', img: I('talk'), lbl: 'Tell me about your day', say: 'Tell me about your day' },
+  { em: '📰', lbl: 'Tell me the news',  say: "Tell me what's been happening" },
+  { em: '➕', lbl: 'Tell me more',      say: 'Tell me more' },
+  { em: '❓', lbl: 'What happened?',    say: 'What happened next?' },
+  { em: '😮', lbl: 'Really?',           say: 'Really?' },
+  { em: '😄', lbl: "That's funny",      say: "That's funny" },
+  { em: '👏', lbl: "That's great",      say: "That's great" },
+  { em: '😕', lbl: "That's no good",    say: "That's no good" },
+  { em: '👍', lbl: 'I agree',           say: 'I agree' },
+  { em: '👎', lbl: "I don't agree",     say: "I don't agree" },
+  { em: '🤷', lbl: "I don't know",      say: "I don't know" },
+  { em: '💭', lbl: 'What do you think?', say: 'What do you think?' },
+  { em: '🔁', lbl: 'Say that again',    say: 'Can you say that again?' },
+  { em: '🐢', lbl: 'Slow down',         say: 'Slow down a bit please' },
+];
 const PAIN_PARTS = [
   { em: '🤕', img: I('head'),     lbl: 'Head',   part: 'head' },
   { em: '👄', img: I('throat'),   lbl: 'Mouth', part: 'mouth or throat' },
@@ -301,6 +321,34 @@ function titleRow(text, backTo) {
   return d;
 }
 
+/* ---- read the buttons aloud: he browses by listening (reading never required) ---- */
+let readTimer = null;
+function stopReadAloud() {
+  clearTimeout(readTimer); readTimer = null;
+  document.querySelectorAll('.tile.reading').forEach(t => t.classList.remove('reading'));
+}
+function readAloudChip(grid) {
+  const b = el('<button class="chip" style="margin:0 6px 10px;">🔊 Read them out</button>');
+  b.addEventListener('click', () => {
+    if (readTimer) { stopReadAloud(); return; }
+    const tiles = Array.prototype.slice.call(grid.querySelectorAll('.tile'));
+    let i = 0;
+    const step = () => {
+      stopReadAloud();
+      if (i >= tiles.length) return;
+      const t = tiles[i];
+      t.classList.add('reading');
+      t.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      const lbl = t.querySelector('.lbl');
+      speakTTS(lbl ? lbl.textContent : '');
+      i++;
+      readTimer = setTimeout(step, 2000);
+    };
+    step();
+  });
+  return b;
+}
+
 const SCREENS = {};
 function applyChrome() {
   // yesno: giant on-screen YES/NO already exist — a second smaller pair splits motor learning.
@@ -313,6 +361,7 @@ function applyChrome() {
 }
 function show(name, arg) {
   if (typeof stopCam === 'function' && name !== 'eyeCam') stopCam();
+  stopReadAloud();
   applyChrome();
   screenEl.innerHTML = '';
   screenEl.scrollTop = 0;
@@ -354,6 +403,7 @@ SCREENS.home = () => {
     g.appendChild(tileBtn(byLbl(SAYINGS, 'I love you'), 'c-heart'));
     g.appendChild(tileBtn(byLbl(SAYINGS, 'Be quiet'), 'c-words'));
     g.appendChild(tileBtn(byLbl(SAYINGS, "That's bullshit"), 'c-words'));
+    screenEl.appendChild(readAloudChip(g));
   } else {
     if (S.recent && S.recent.length) {
       screenEl.appendChild(el('<div class="recent-lbl">Recently said</div>'));
@@ -376,8 +426,9 @@ SCREENS.home = () => {
     g.appendChild(navTile('🏠', 'Everyday', 'everyday', 'c-day'));
     g.appendChild(navTile('🎾', 'Sport / TV', 'sport', 'c-sport'));
     g.appendChild(navTile('🗣️', 'My sayings', 'sayings', 'c-words'));
+    g.appendChild(navTile('💬', 'Chat', 'chat', 'c-feel'));
     g.appendChild(navTile('❤️', 'From the heart', 'heart', 'c-heart'));
-    g.appendChild(navTile('💬', 'Feelings', 'feelings', 'c-feel'));
+    g.appendChild(navTile('😊', 'Feelings', 'feelings', 'c-feel'));
     g.appendChild(navTile('👨‍👩‍👧', 'People', 'people', 'c-people'));
     if (S.scenes && S.scenes.length) g.appendChild(navTile('🖼️', 'My room', 'scenes', 'c-people'));
     g.appendChild(navTile('❓', 'Ask him', 'ask'));
@@ -386,53 +437,21 @@ SCREENS.home = () => {
   screenEl.appendChild(g);
 };
 
-/* ---- needs ---- */
-SCREENS.needs = () => {
-  screenEl.appendChild(titleRow('I need…', 'home'));
+/* ---- shared list-screen builder: title, "read them out" chip, tile grid ---- */
+function listScreen(title, items, cls) {
+  screenEl.appendChild(titleRow(title, 'home'));
   const g = el('<div class="grid"></div>');
-  NEEDS.forEach(n => g.appendChild(tileBtn(n, 'c-need')));
+  items.forEach(n => g.appendChild(tileBtn(n, cls)));
+  screenEl.appendChild(readAloudChip(g));
   screenEl.appendChild(g);
-};
-
-/* ---- everyday ---- */
-SCREENS.everyday = () => {
-  screenEl.appendChild(titleRow('Everyday', 'home'));
-  const g = el('<div class="grid"></div>');
-  EVERYDAY.forEach(n => g.appendChild(tileBtn(n, 'c-day')));
-  screenEl.appendChild(g);
-};
-
-/* ---- sport / tv ---- */
-SCREENS.sport = () => {
-  screenEl.appendChild(titleRow('Sport / TV', 'home'));
-  const g = el('<div class="grid"></div>');
-  SPORT.forEach(n => g.appendChild(tileBtn(n, 'c-sport')));
-  screenEl.appendChild(g);
-};
-
-/* ---- feelings ---- */
-SCREENS.feelings = () => {
-  screenEl.appendChild(titleRow('Feelings', 'home'));
-  const g = el('<div class="grid"></div>');
-  FEELINGS.forEach(f => g.appendChild(tileBtn(f, 'c-feel')));
-  screenEl.appendChild(g);
-};
-
-/* ---- his own sayings ---- */
-SCREENS.sayings = () => {
-  screenEl.appendChild(titleRow('My sayings', 'home'));
-  const g = el('<div class="grid"></div>');
-  SAYINGS.forEach(s => g.appendChild(tileBtn(s, 'c-words')));
-  screenEl.appendChild(g);
-};
-
-/* ---- from the heart ---- */
-SCREENS.heart = () => {
-  screenEl.appendChild(titleRow('From the heart', 'home'));
-  const g = el('<div class="grid"></div>');
-  HEART.forEach(h => g.appendChild(tileBtn(h, 'c-heart')));
-  screenEl.appendChild(g);
-};
+}
+SCREENS.needs = () => listScreen('I need…', NEEDS, 'c-need');
+SCREENS.everyday = () => listScreen('Everyday', EVERYDAY, 'c-day');
+SCREENS.sport = () => listScreen('Sport / TV', SPORT, 'c-sport');
+SCREENS.feelings = () => listScreen('Feelings', FEELINGS, 'c-feel');
+SCREENS.sayings = () => listScreen('My sayings', SAYINGS, 'c-words');
+SCREENS.heart = () => listScreen('From the heart', HEART, 'c-heart');
+SCREENS.chat = () => listScreen('Chat', CHAT, 'c-feel');
 
 /* ---- tap anywhere = YES: no aiming, any touch is the signal ---- */
 SCREENS.tapYes = () => {
@@ -451,6 +470,76 @@ SCREENS.tapYes = () => {
     setTimeout(() => { said.textContent = ''; }, 4000);
   });
   document.body.appendChild(wrap);
+};
+
+/* ---- tap code: no aiming at all — the NUMBER of taps anywhere is the message ---- */
+SCREENS.tapCode = () => {
+  const wrap = el('<div style="position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;padding:10px;gap:8px;"></div>');
+  const exit = el('<button class="backbtn" style="align-self:flex-start;">‹ Done</button>');
+  exit.addEventListener('click', e => { e.stopPropagation(); wrap.remove(); show('ask'); });
+  wrap.appendChild(exit);
+  wrap.appendChild(el('<div style="font-size:clamp(16px,2.2vw,20px);color:var(--muted);">Tap ANYWHERE on the screen — the number of taps is the message. The cards are just reminders.</div>'));
+  const legend = el('<div class="grid" style="flex:1;grid-template-columns:repeat(2,1fr);pointer-events:none;"></div>');
+  const CODES = [
+    { n: '1 tap',  em: '👍', lbl: 'YES' },
+    { n: '2 taps', em: '👎', lbl: 'NO' },
+    { n: '3 taps', em: '📣', img: I('call'), lbl: 'COME HERE' },
+    { n: 'HOLD',   em: '🤕', img: I('pain'), lbl: 'PAIN' },
+  ];
+  CODES.forEach(c => {
+    legend.appendChild(el('<div class="tile" style="min-height:24vh;"><div style="font-size:clamp(20px,3.5vh,30px);font-weight:800;color:var(--blue);">' + c.n + '</div>' + tileVisual(c) + '<div class="lbl">' + c.lbl + '</div></div>'));
+  });
+  wrap.appendChild(legend);
+  // inline feedback (not the big overlay) so the whole screen stays tappable for the next message
+  const fb = el('<div style="min-height:14vh;display:flex;align-items:center;justify-content:center;gap:16px;font-size:clamp(34px,8vh,64px);font-weight:800;"></div>');
+  wrap.appendChild(fb);
+  let taps = 0, commitT = null, holdT = null, held = false, fbT = null;
+  function said(em, word, color, sayText) {
+    fb.innerHTML = '<span>' + em + '</span><span style="color:' + color + ';">' + word + '</span>';
+    clearTimeout(fbT);
+    fbT = setTimeout(() => { fb.innerHTML = ''; }, 6000);
+    speak(sayText);
+  }
+  function fire() {
+    const n = taps; taps = 0;
+    if (n === 1) said('👍', 'YES', 'var(--green)', 'Yes');
+    else if (n === 2) said('👎', 'NO', 'var(--red)', 'No');
+    else if (n >= 3) {
+      said('📣', 'COME HERE', 'var(--red)', 'I need someone to come, please');
+      if (S.ntfy) fetch('https://ntfy.sh/' + encodeURIComponent(S.ntfy), {
+        method: 'POST',
+        body: S.callName ? S.callName + ' needs you to come now.' : 'Please come to the bedside now.',
+        headers: { 'Title': 'Talk Board', 'Priority': 'urgent', 'Tags': 'bell' },
+      }).catch(() => {});
+    }
+  }
+  wrap.addEventListener('pointerdown', e => {
+    if (e.target.closest('.backbtn')) return;
+    held = false;
+    holdT = setTimeout(() => { held = true; taps = 0; clearTimeout(commitT); said('🤕', 'PAIN', 'var(--red)', "I'm in pain"); }, 900);
+  });
+  wrap.addEventListener('pointerup', e => {
+    if (e.target.closest('.backbtn')) return;
+    clearTimeout(holdT);
+    if (held) return;
+    taps++;
+    clearTimeout(commitT);
+    commitT = setTimeout(fire, 800);
+  });
+  document.body.appendChild(wrap);
+};
+
+/* ---- our signals: the family's shared dictionary of HIS off-screen signals ---- */
+SCREENS.signals = () => {
+  screenEl.appendChild(titleRow('Our signals', 'ask'));
+  const wrap = el('<div style="max-width:680px;margin:0 auto;"></div>');
+  if (!S.signals.length) {
+    wrap.appendChild(el('<div style="font-size:20px;color:var(--muted);padding:10px 6px;line-height:1.5;">No signals recorded yet. When he uses something consistently — a hand squeeze, looking up, a sound — agree what it means and add it in ⚙️ Settings → <b>Our signals</b>, so every visitor, nurse and carer reads him the same way.</div>'));
+  }
+  S.signals.forEach(sg => {
+    wrap.appendChild(el('<div class="tile" style="width:100%;min-height:0;padding:18px;margin-bottom:10px;flex-direction:row;gap:14px;justify-content:flex-start;"><div class="lbl" style="font-size:clamp(22px,3.4vw,30px);">' + escapeHtml(sg.sig) + '</div><div style="font-size:clamp(22px,3.4vw,30px);color:var(--muted);">→</div><div class="lbl" style="font-size:clamp(22px,3.4vw,30px);color:var(--green);">' + escapeHtml(sg.means) + '</div></div>'));
+  });
+  screenEl.appendChild(wrap);
 };
 
 /* ---- eye pointing: options at screen extremes, family reads his gaze ---- */
@@ -731,6 +820,7 @@ SCREENS.pain = () => {
     b.addEventListener('click', () => show('painLevel', p));
     g.appendChild(b);
   });
+  screenEl.appendChild(readAloudChip(g));
   screenEl.appendChild(g);
 };
 SCREENS.painLevel = (part) => {
@@ -777,6 +867,8 @@ SCREENS.ask = () => {
   };
   card('🔁', 'One at a time', 'You flip through spoken options; he gives ANY yes-signal. Start here — no tapping concept needed.', () => show('scanPick'));
   card('✋', 'Tap anywhere = YES', 'One yes/no question out loud: any touch means YES. No aiming.', () => show('tapYes'));
+  card('🔢', 'Tap code', 'Taps anywhere ARE the message: 1 = yes, 2 = no, 3 = come here, hold = pain. Reminder cards stay on screen.', () => show('tapCode'));
+  card('🤝', 'Our signals', "The family's dictionary of his own signals (squeeze, look, sound) — so everyone reads him the same way.", () => show('signals'));
   card('👀', 'Eye pointing', 'When tapping is too hard: hold the screen up, he looks, you tap it for him.', () => show('choiceSetup', 'eye'));
   card('🔀', 'He taps a choice', 'Good windows only: 2–4 big options he taps himself.', () => show('choiceSetup', 'tap'));
   card('📷', 'Live eye view', "Only if you can't read his eyes yourself — the camera highlights the side he looks at.", () => show('choiceSetup', 'cam'));
@@ -1018,6 +1110,28 @@ SCREENS.settings = () => {
   });
   scBox.appendChild(scName); scBox.appendChild(scFile); scBox.appendChild(scAdd);
   wrap.appendChild(scRow);
+
+  /* our signals */
+  const sgRow = el('<div class="set-row"><h3>Our signals</h3><label>His own reliable signals and what the family agreed they mean (e.g. "One squeeze" → "Yes"). Everyone — visitors, nurses, carers — should read him the same way. Shown big under Ask him → Our signals.</label><div id="sglist"></div><div></div></div>');
+  const sglist = sgRow.querySelector('#sglist');
+  S.signals.forEach((sg, idx) => {
+    const r = el('<div class="person-row"><span class="nm">' + escapeHtml(sg.sig) + ' → ' + escapeHtml(sg.means) + '</span></div>');
+    const rm = el('<button class="rm">Remove</button>');
+    rm.addEventListener('click', () => { S.signals.splice(idx, 1); save(); show('settings'); });
+    r.appendChild(rm);
+    sglist.appendChild(r);
+  });
+  const sgBox = sgRow.querySelector('div:last-child');
+  const sigIn = el('<input class="choice-input" style="margin-top:10px;" placeholder="The signal (e.g. One hand squeeze)">');
+  const meanIn = el('<input class="choice-input" placeholder="What it means (e.g. Yes)">');
+  const sgAdd = el('<button class="toggle-btn">＋ Add signal</button>');
+  sgAdd.addEventListener('click', () => {
+    const sig = sigIn.value.trim(), means = meanIn.value.trim();
+    if (!sig || !means) { alert('Fill in both the signal and what it means.'); return; }
+    S.signals.push({ sig, means }); save(); show('settings');
+  });
+  sgBox.appendChild(sigIn); sgBox.appendChild(meanIn); sgBox.appendChild(sgAdd);
+  wrap.appendChild(sgRow);
 
   /* tips */
   const tipsRow = el('<div class="set-row"><h3>Talking with him</h3><label>Short, practical tips from aphasia and palliative-care specialists.</label><div style="margin-top:10px;"></div></div>');

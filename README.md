@@ -38,6 +38,10 @@ No accounts, no server, free. Anyone who knows the topic name can see alerts, so
   - Add **People** with photos and names.
   - Pick the **voice** and speed (Karen, the Australian voice, is used automatically if the iPad has it — Settings → Accessibility → Spoken Content → Voices to download more).
 - **Choices** — you type 2–4 options ("Water / Tea", "Now / Later"), tap *Show him the choices*, and hand him the screen. You carry the words; he just picks. This is the most useful tool on days when finding words is hardest.
+- **🔊 Read them out** (top of his screens) — speaks each button in turn while highlighting it, so he can browse by listening; reading is never required.
+- **Chat** — conversation turns, not needs: "Tell me more", "Really?", "I agree", "Say that again". Lets him hold up his end of a conversation.
+- **Tap code** (Ask him) — no aiming: 1 tap anywhere = yes, 2 = no, 3 = come here, hold = pain, with reminder cards always on screen.
+- **Our signals** (Settings) — record the family's agreed meanings for his own signals (squeeze, look, sound) so every visitor and nurse reads him the same way.
 - **Yes / No** and the 🔊 repeat button are always at the top of every screen.
 - **Room photo with tap spots** (⚙️ Settings): photograph his actual room, tap the photo to place speaking spots ("open the window", "pass me that"). Real photos are the most reliable images for aphasia.
 - The app follows the device's light/dark setting — dark at night automatically.

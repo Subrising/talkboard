@@ -75,6 +75,8 @@
   .tile .em { font-size: clamp(64px, 10vw, 104px); line-height: 1.05; }
   .tile .lbl { font-size: clamp(18px, 2.4vw, 24px); font-weight: 700; line-height: 1.15; }
   .tile.nav { background: var(--blue-bg); color: var(--blue); }
+  /* "read them out" highlight: follows the spoken word tile by tile */
+  .tile.reading { outline: 6px solid var(--blue); outline-offset: -3px; }
   .tile.warn { background: var(--amber-bg); }
   .tile img.face {
     width: clamp(100px, 15vw, 160px); height: clamp(100px, 15vw, 160px);
@@ -316,6 +318,6 @@
   </div>
 </div>
 
-<script src="./app.js?v=19"></script>
+<script src="./app.js?v=20"></script>
 </body>
 </html>

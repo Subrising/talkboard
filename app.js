@@ -330,7 +330,7 @@ SCREENS.home = () => {
   const g = el('<div class="grid big"></div>');
   const painItem = { em: '🤕', img: I('pain'), lbl: 'Pain' };
   if (S.mode === 'yesno') {
-    g.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    g.classList.add('fill2');
     const yes = el('<button class="tile" style="min-height:34vh;background:var(--green-bg);color:var(--green);"><div class="em">👍</div><div class="lbl" style="font-size:clamp(30px,5vw,48px);">YES</div></button>');
     yes.addEventListener('click', () => showBig('👍', 'YES', 'Yes'));
     const no = el('<button class="tile" style="min-height:34vh;background:var(--red-bg);color:var(--red);"><div class="em">👎</div><div class="lbl" style="font-size:clamp(30px,5vw,48px);">NO</div></button>');
@@ -342,14 +342,18 @@ SCREENS.home = () => {
     g.appendChild(yes); g.appendChild(no); g.appendChild(pain); g.appendChild(need);
     g.appendChild(callTile(true));
   } else if (S.mode === 'simple') {
+    g.classList.add('fill2', 'many');
     const byLbl = (list, lbl) => list.find(x => x.lbl === lbl);
-    // 4 targets max at his stage (AssistiveWare grid-size guidance for emerging communicators)
+    // needs first, then his own words — the phrases HE actually says
     g.appendChild(tileBtn(byLbl(NEEDS, 'Drink')));
     g.appendChild(tileBtn(byLbl(NEEDS, 'Toilet')));
     const pain = el('<button class="tile warn">' + tileVisual(painItem) + '<div class="lbl">Pain</div></button>');
     pain.addEventListener('click', () => showBig('🤕', 'PAIN', "I'm in pain", null, I('pain')));
     g.appendChild(pain);
     g.appendChild(callTile(false));
+    g.appendChild(tileBtn(byLbl(SAYINGS, 'I love you'), 'c-heart'));
+    g.appendChild(tileBtn(byLbl(SAYINGS, 'Be quiet'), 'c-words'));
+    g.appendChild(tileBtn(byLbl(SAYINGS, "That's bullshit"), 'c-words'));
   } else {
     if (S.recent && S.recent.length) {
       screenEl.appendChild(el('<div class="recent-lbl">Recently said</div>'));
@@ -540,13 +544,13 @@ function irisRatio(f, iris, cA, cB) {
 
 /* ---- how to enable iPadOS eye tracking ---- */
 SCREENS.eyeHelp = () => {
-  screenEl.appendChild(titleRow("iPad's built-in eye tracking", 'ask'));
+  screenEl.appendChild(titleRow('Built-in eye tracking (iPad & iPhone)', 'ask'));
   screenEl.appendChild(el(`<div style="max-width:680px;margin:0 auto;font-size:20px;line-height:1.55;-webkit-user-select:text;user-select:text;">
-    <p><b>Works on:</b> iPad 8th generation or newer (incl. 9th and 10th gen), running <b>iPadOS 18 or later</b>. If you can't find the menu below, update the iPad first: Settings → General → Software Update.</p>
-    <p><b>Turn it on:</b> Settings → Accessibility → scroll to <i>Physical and Motor</i> → <b>Eye Tracking</b> → switch on.</p>
-    <p><b>Calibration:</b> the iPad shows a bright dot that moves around the screen. Hold the iPad steady about 45&nbsp;cm from his face (prop it — don't handhold) and let him watch the dot. A bright moving dot grabs attention on its own, so he may pass without needing to understand anything. It takes ~15 seconds.</p>
+    <p><b>Works on:</b> iPad 8th generation or newer (incl. 9th and 10th gen) running <b>iPadOS 18 or later</b>, and iPhone 12 or newer running <b>iOS 18 or later</b>. If you can't find the menu below, update the device first: Settings → General → Software Update. (The bigger iPad screen is much easier for his eyes to aim at than a phone.)</p>
+    <p><b>Turn it on (same on iPad and iPhone):</b> Settings → Accessibility → scroll to <i>Physical and Motor</i> → <b>Eye Tracking</b> → switch on.</p>
+    <p><b>Calibration:</b> the screen shows a bright dot that moves around. Hold the device steady about 45&nbsp;cm from his face (prop it — don't handhold) and let him watch the dot. A bright moving dot grabs attention on its own, so he may pass without needing to understand anything. It takes ~15 seconds.</p>
     <p><b>If it works:</b> a pointer follows his eyes everywhere in this app, and resting his gaze on a button taps it (that's "Dwell"). Turn the dwell time UP (3–4 seconds) in the same settings so glances don't mis-fire.</p>
-    <p><b>If calibration doesn't take</b> — likely, and fine — use Eye pointing here instead: you read his eyes, and yours don't need calibrating.</p>
+    <p><b>If calibration doesn't take</b> — likely, and fine — use Eye pointing here instead (⚙️ Settings → Ask him → Eye pointing): you read his eyes, and yours don't need calibrating.</p>
   </div>`));
 };
 
@@ -776,7 +780,7 @@ SCREENS.ask = () => {
   card('👀', 'Eye pointing', 'When tapping is too hard: hold the screen up, he looks, you tap it for him.', () => show('choiceSetup', 'eye'));
   card('🔀', 'He taps a choice', 'Good windows only: 2–4 big options he taps himself.', () => show('choiceSetup', 'tap'));
   card('📷', 'Live eye view', "Only if you can't read his eyes yourself — the camera highlights the side he looks at.", () => show('choiceSetup', 'cam'));
-  card('ℹ️', "iPad's built-in eye tracking", 'How to turn on the pointer-follows-his-eyes feature in iPad settings.', () => show('eyeHelp'));
+  card('ℹ️', 'Built-in eye tracking (iPad & iPhone)', 'How to turn on the pointer-follows-his-eyes feature in the device settings.', () => show('eyeHelp'));
   screenEl.appendChild(wrap);
 };
 
@@ -918,7 +922,7 @@ SCREENS.settings = () => {
   /* family quick links (his modes hide the home button, so this is the family's doorway) */
   const qlRow = el('<div class="set-row"><h3>Family screens</h3><div></div></div>');
   const qlBox = qlRow.querySelector('div:last-child');
-  [['❓ Ask him', 'ask'], ['📖 Tips', 'tips'], ['🧭 Device setup', 'setup']].forEach(([lbl, scr]) => {
+  [['❓ Ask him', 'ask'], ['👀 Eye tracking', 'eyeHelp'], ['📖 Tips', 'tips'], ['🧭 Device setup', 'setup']].forEach(([lbl, scr]) => {
     const b = el('<button class="toggle-btn">' + lbl + '</button>');
     b.addEventListener('click', () => show(scr, scr === 'setup' ? 0 : undefined));
     qlBox.appendChild(b);
@@ -1093,7 +1097,8 @@ SCREENS.settings = () => {
   wrap.appendChild(vRow);
 
   /* real photos on his buttons */
-  const PHOTO_SLOTS = ['Drink', 'Toilet', 'Pain', 'COME HERE', 'Hungry', 'Rest', 'Nurse', 'Coffee', 'Water', 'TV on', 'Blanket', 'My tablets'];
+  // Help / Move me / Sit me up / Wait have the weakest pictograms — a real photo helps those most
+  const PHOTO_SLOTS = ['Drink', 'Toilet', 'Pain', 'COME HERE', 'Help', 'Move me', 'Sit me up', 'Wait', 'Hungry', 'Rest', 'Nurse', 'Coffee', 'Water', 'TV on', 'Blanket', 'My tablets'];
   const pbRow = el('<div class="set-row"><h3>Real photos on his buttons</h3><label>His recognition of REAL things outlasts symbols and words. Photograph HIS actual mug, HIS chair, the actual toilet door — one object, plain background, good light — and put it on the button. Photos stay on this device.</label><div id="pblist"></div></div>');
   const pblist = pbRow.querySelector('#pblist');
   PHOTO_SLOTS.forEach(lbl => {

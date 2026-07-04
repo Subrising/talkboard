@@ -64,23 +64,44 @@
   }
   .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(var(--tilemin, 160px), 1fr)); }
   .grid.big { grid-template-columns: repeat(auto-fill, minmax(calc(var(--tilemin, 160px) + 60px), 1fr)); }
+  /* image-first tiles: the picture is what he recognises — the word is secondary */
   .tile {
     background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
-    min-height: 140px; padding: 14px 10px;
+    min-height: 180px; padding: 14px 10px 12px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     text-align: center;
   }
-  .grid.big .tile { min-height: 170px; }
-  .tile .em { font-size: clamp(44px, 7vw, 64px); line-height: 1; }
-  .tile .lbl { font-size: clamp(22px, 3.2vw, 30px); font-weight: 700; line-height: 1.15; }
+  .grid.big .tile { min-height: 220px; }
+  .tile .em { font-size: clamp(64px, 10vw, 104px); line-height: 1.05; }
+  .tile .lbl { font-size: clamp(18px, 2.4vw, 24px); font-weight: 700; line-height: 1.15; }
   .tile.nav { background: var(--blue-bg); color: var(--blue); }
   .tile.warn { background: var(--amber-bg); }
   .tile img.face {
-    width: clamp(72px, 11vw, 110px); height: clamp(72px, 11vw, 110px);
+    width: clamp(100px, 15vw, 160px); height: clamp(100px, 15vw, 160px);
     border-radius: 50%; object-fit: cover; border: 3px solid #e7e2d8;
   }
-  .tile img.pic { width: clamp(60px, 9vw, 100px); height: clamp(60px, 9vw, 100px); object-fit: contain; }
-  .tile img.pic.photo { object-fit: cover; border-radius: 16px; width: clamp(80px, 12vw, 130px); height: clamp(68px, 10vw, 110px); }
+  .tile img.pic { width: clamp(104px, 16vw, 176px); height: clamp(104px, 16vw, 176px); object-fit: contain; }
+  .tile img.pic.photo { object-fit: cover; border-radius: 16px; width: clamp(130px, 20vw, 220px); height: clamp(104px, 16vw, 176px); }
+  /* his modes (Simple / Yes-No): few tiles, so fill the screen with them — picture huge */
+  .grid.fill2 { grid-template-columns: repeat(2, 1fr); }
+  .grid.fill2 .tile { min-height: 36vh; }
+  .grid.fill2 .tile img.pic { width: min(46vw, 34vh); height: min(46vw, 30vh); }
+  .grid.fill2 .tile img.pic.photo { width: min(60vw, 44vh); height: min(46vw, 30vh); }
+  .grid.fill2 .tile .em { font-size: min(24vw, 24vh); }
+  .grid.fill2 .tile .lbl { font-size: clamp(24px, 4.2vh, 40px); }
+  /* 5+ tiles: more columns on wide screens, slightly smaller so it still fits without scrolling */
+  .grid.fill2.many { grid-template-columns: repeat(auto-fit, minmax(min(46%, 270px), 1fr)); }
+  .grid.fill2.many .tile { min-height: 22vh; }
+  .grid.fill2.many .tile img.pic { width: min(22vw, 20vh); height: min(22vw, 17vh); }
+  .grid.fill2.many .tile img.pic.photo { width: min(28vw, 26vh); height: min(22vw, 17vh); }
+  .grid.fill2.many .tile .em { font-size: min(15vw, 14vh); }
+  .grid.fill2.many .tile .lbl { font-size: clamp(20px, 3.2vh, 32px); }
+  @media (orientation: landscape) and (min-width: 700px) {
+    .grid.fill2.many .tile { min-height: 33vh; }
+    .grid.fill2.many .tile img.pic { width: min(22vw, 25vh); height: min(22vw, 22vh); }
+    .grid.fill2.many .tile img.pic.photo { width: min(28vw, 32vh); height: min(22vw, 22vh); }
+    .grid.fill2.many .tile .em { font-size: min(15vw, 18vh); }
+  }
   .backbtn {
     background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
     font-size: clamp(18px, 2.6vw, 24px); font-weight: 700; color: var(--muted);
@@ -203,11 +224,13 @@
     #topbar button { min-height: 62px; border-radius: 16px; }
     #screen { padding: 8px; }
     .grid, .grid.big { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    .tile { min-height: 116px; padding: 10px 6px; border-radius: 16px; }
-    .grid.big .tile { min-height: 132px; }
-    .tile .em { font-size: 40px; }
-    .tile .lbl { font-size: 19px; }
-    .tile img.pic { width: 56px; height: 56px; }
+    .tile { min-height: 150px; padding: 10px 6px; border-radius: 16px; }
+    .grid.big .tile { min-height: 168px; }
+    .tile .em { font-size: 64px; }
+    .tile .lbl { font-size: 17px; }
+    .tile img.pic { width: 96px; height: 96px; }
+    .tile img.pic.photo { width: 120px; height: 96px; }
+    .tile img.face { width: 92px; height: 92px; }
     .kb, .kb-row { gap: 4px; }
     .key { min-height: 54px; font-size: 19px; border-radius: 10px; }
     .key.action { font-size: 15px; }
@@ -259,7 +282,10 @@
   html.force-dark .toggle-btn.on { color: #10141c; }
 
   /* ---------- one-column layout (right visual-field loss / left-hand reach) ---------- */
-  html.one-col .grid, html.one-col .grid.big { grid-template-columns: minmax(0, 440px); justify-content: flex-start; }
+  html.one-col .grid, html.one-col .grid.big, html.one-col .grid.fill2 { grid-template-columns: minmax(0, 440px); justify-content: flex-start; }
+  html.one-col .grid.fill2 .tile { min-height: 30vh; }
+  html.one-col .grid.fill2 .tile img.pic { width: min(70vw, 24vh); height: min(70vw, 22vh); }
+  html.one-col .grid.fill2 .tile .em { font-size: min(30vw, 18vh); }
   html.one-col #topbar { flex-wrap: wrap; max-width: 464px; }
   html.one-col #btn-yes, html.one-col #btn-no { flex: 1 1 100%; min-height: 76px; }
   html.one-col #btn-again, html.one-col #btn-home { flex: 1 1 40%; min-height: 64px; }
@@ -290,6 +316,6 @@
   </div>
 </div>
 
-<script src="./app.js?v=18"></script>
+<script src="./app.js?v=19"></script>
 </body>
 </html>

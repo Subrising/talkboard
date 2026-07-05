@@ -805,8 +805,38 @@ function irisRatio(f, iris, cA, cB) {
 }
 
 /* ---- how to enable iPadOS eye tracking ---- */
+/* best-effort on-device support check: Apple exposes no API for accessibility features,
+   but the screen's logical size identifies most iPad/iPhone models exactly */
+function eyeDeviceCheck() {
+  const ua = navigator.userAgent;
+  const w = Math.min(screen.width, screen.height), h = Math.max(screen.width, screen.height);
+  const key = w + 'x' + h;
+  const isIPhone = /iPhone/.test(ua);
+  const isIPad = /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 0);
+  if (!isIPhone && !isIPad) return { s: 'na', t: "This isn't an iPad or iPhone, so Apple's built-in eye tracking doesn't apply on this device. Eye pointing (below) works on anything." };
+  if (isIPad) {
+    const yes = { '820x1180': 'an iPad 10th gen or iPad Air (2020 or later)', '744x1133': 'an iPad mini (6th gen or later)', '834x1210': 'an iPad Pro 11″ (M4)', '1032x1376': 'an iPad Pro 13″ (M4)' };
+    const no = { '810x1080': 'the 10.2″ iPad (7th, 8th or 9th gen)', '834x1112': 'an iPad Air 3 or Pro 10.5″', '768x1024': 'an older iPad model' };
+    if (yes[key]) return { s: 'yes', t: 'This looks like ' + yes[key] + ' — built-in eye tracking IS supported. It also needs iPadOS 18 or later.' };
+    if (no[key]) return { s: 'no', t: 'This looks like ' + no[key] + ' — Apple does NOT support built-in eye tracking on it, and no setting can add it. Use Eye pointing instead.' };
+    if (key === '834x1194') return { s: 'maybe', t: 'This is an 11″ iPad Pro or Air — several years share this screen. Supported from Pro 3rd gen (2021) / Air 11″ M2. The sure check: Settings → Accessibility — if there\'s no “Eye Tracking” item, this one can\'t.' };
+    if (key === '1024x1366') return { s: 'maybe', t: 'This is a 12.9″ iPad Pro — supported from the 5th gen (2021). The sure check: Settings → Accessibility — if there\'s no “Eye Tracking” item, this one can\'t.' };
+    return { s: 'maybe', t: 'Couldn\'t identify this iPad model from here. The sure check: Settings → Accessibility — if there\'s no “Eye Tracking” item, it isn\'t supported.' };
+  }
+  if (key === '375x667') return { s: 'maybe', t: 'This is an iPhone SE — the 3rd gen (2022) supports it, older ones don\'t. Check Settings → Accessibility for an “Eye Tracking” item.' };
+  if (key === '375x812') return { s: 'maybe', t: 'This could be an iPhone 12/13 mini (supported) or an X/XS/11 Pro (not). Check Settings → Accessibility for an “Eye Tracking” item.' };
+  if ({ '390x844': 1, '393x852': 1, '402x874': 1, '428x926': 1, '430x932': 1, '440x956': 1 }[key]) {
+    return { s: 'yes', t: 'This iPhone supports built-in eye tracking. It also needs iOS 18 or later.' };
+  }
+  if (key === '414x896' || h <= 736) return { s: 'no', t: 'This iPhone model does not support built-in eye tracking. Use Eye pointing instead.' };
+  return { s: 'maybe', t: 'Couldn\'t identify this iPhone from here. Check Settings → Accessibility for an “Eye Tracking” item — if it\'s not there, it isn\'t supported.' };
+}
 SCREENS.eyeHelp = () => {
   screenEl.appendChild(titleRow('Built-in eye tracking (iPad & iPhone)', 'ask'));
+  const v = eyeDeviceCheck();
+  const vbg = { yes: 'var(--green-bg)', no: 'var(--red-bg)', maybe: 'var(--amber-bg)', na: 'var(--card)' }[v.s];
+  const vicon = { yes: '✅', no: '❌', maybe: '🤔', na: 'ℹ️' }[v.s];
+  screenEl.appendChild(el('<div style="max-width:680px;margin:0 auto 14px;padding:16px 18px;border-radius:18px;background:' + vbg + ';box-shadow:var(--shadow);font-size:20px;line-height:1.5;"><b>' + vicon + ' This device:</b> ' + v.t + '</div>'));
   screenEl.appendChild(el(`<div style="max-width:680px;margin:0 auto;font-size:20px;line-height:1.55;-webkit-user-select:text;user-select:text;">
     <p><b>First check the device can do it.</b> If Settings → Accessibility has no <b>Eye Tracking</b> item, that device does not support it — no setting will make it appear. Apple only supports:</p>
     <p style="margin-left:12px;"><b>iPad:</b> iPad 10th gen or newer, iPad Air 4th gen or newer, iPad mini 6th gen or newer, iPad Pro 11″ 3rd gen / 12.9″ 5th gen (2021) or newer. <b>NOT the iPad 8th or 9th generation.</b><br><b>iPhone:</b> iPhone 12 or newer, or iPhone SE 3rd gen.<br>All need <b>iOS/iPadOS 18 or later</b> (Settings → General → Software Update).</p>

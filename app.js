@@ -25,6 +25,7 @@ const DEFAULTS = {
   phrases: ['Please stay with me', 'I need a rest', 'Can you fix my pillow?'],
   signals: [],
   sounds: [],
+  peopleLoaded: false,
 };
 let S = load();
 function load() {
@@ -322,6 +323,27 @@ function titleRow(text, backTo) {
   return d;
 }
 
+/* ---- encrypted family photos: people.enc ships with the app but only the family
+   code can read it (PBKDF2 + AES-GCM via WebCrypto). Decrypted photos stay on-device. ---- */
+let PEOPLE_ENC = null;
+async function decryptPeople(code, blob) {
+  const raw = Uint8Array.from(atob(blob), c => c.charCodeAt(0));
+  const salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt, iterations: 300000, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ct);
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+function mergePeople(list) {
+  (list || []).forEach(p => {
+    if (!p || typeof p.name !== 'string') return;
+    const i = S.people.findIndex(x => x.name.trim().toLowerCase() === p.name.trim().toLowerCase());
+    if (i >= 0) S.people[i].photo = p.photo || S.people[i].photo;
+    else S.people.push({ name: p.name.trim(), photo: p.photo || null });
+  });
+}
 /* ---- read the buttons aloud: he browses by listening (reading never required) ---- */
 let readTimer = null;
 function stopReadAloud() {
@@ -351,6 +373,32 @@ function readAloudChip(grid) {
 }
 
 const SCREENS = {};
+SCREENS.unlock = () => {
+  const wrap = el('<div style="max-width:520px;margin:6vh auto 0;text-align:center;padding:0 10px;"></div>');
+  wrap.appendChild(el('<div style="font-size:72px;">👨‍👩‍👧‍👦</div>'));
+  wrap.appendChild(el('<h2 style="font-size:clamp(26px,4vw,34px);margin:12px 0 8px;">Family photos</h2>'));
+  wrap.appendChild(el('<div style="font-size:19px;color:var(--muted);margin-bottom:20px;">Enter the family code to load everyone\'s photos onto this device. Asked once — the photos then stay on this device.</div>'));
+  const inp = el('<input class="choice-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Family code" style="text-align:center;font-size:30px;letter-spacing:.3em;">');
+  const msg = el('<div style="color:var(--red);font-weight:700;min-height:1.4em;margin:8px 0;"></div>');
+  const go = el('<button class="primary-btn">Unlock the photos</button>');
+  const skip = el('<button class="backbtn" style="margin-top:14px;">Skip for now</button>');
+  go.addEventListener('click', () => {
+    const code = inp.value.trim();
+    if (!code) return;
+    go.disabled = true; msg.textContent = 'Unlocking…'; msg.style.color = 'var(--muted)';
+    decryptPeople(code, PEOPLE_ENC).then(d => {
+      mergePeople(d.people);
+      S.peopleLoaded = true; save();
+      show(S.setupDone ? 'home' : 'setup');
+    }).catch(() => {
+      go.disabled = false; msg.style.color = 'var(--red)';
+      msg.textContent = "That's not the family code — try again.";
+    });
+  });
+  skip.addEventListener('click', () => { S.peopleLoaded = true; save(); show(S.setupDone ? 'home' : 'setup'); });
+  wrap.appendChild(inp); wrap.appendChild(msg); wrap.appendChild(go); wrap.appendChild(el('<div></div>')).appendChild(skip);
+  screenEl.appendChild(wrap);
+};
 function applyChrome() {
   // yesno: giant on-screen YES/NO already exist — a second smaller pair splits motor learning.
   // his modes: no repeat/home icons — one mis-tap lands him somewhere unfamiliar. Family: hold the gear.
@@ -1414,6 +1462,14 @@ SCREENS.settings = () => {
     }
   });
   addWrap.appendChild(nameIn); addWrap.appendChild(fileIn); addWrap.appendChild(addBtn);
+  /* re-open the family-code unlock (e.g. after skipping it on first launch) */
+  const unlockBtn = el('<button class="toggle-btn">🔐 Load family photos (code)</button>');
+  unlockBtn.addEventListener('click', () => {
+    fetch('./people.enc').then(r => { if (!r.ok) throw 0; return r.text(); })
+      .then(t => { PEOPLE_ENC = t; show('unlock'); })
+      .catch(() => alert('The photo bundle could not be loaded — are you online?'));
+  });
+  addWrap.appendChild(unlockBtn);
   /* one-tap people import: a JSON file of {people:[{name, photo}]} merges into the list
      (same-name entries are updated). Only people are touched — no other settings. */
   const ppIn = el('<input type="file" accept="application/json,.json" style="display:none;">');
@@ -1499,6 +1555,12 @@ keepAwake();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
 
 show(S.setupDone ? 'home' : 'setup');
+/* first launch on this device: offer to unlock the built-in family photos */
+if (!S.peopleLoaded) {
+  fetch('./people.enc').then(r => { if (!r.ok) throw 0; return r.text(); })
+    .then(t => { PEOPLE_ENC = t; show('unlock'); })
+    .catch(() => {});
+}
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

@@ -1414,6 +1414,35 @@ SCREENS.settings = () => {
     }
   });
   addWrap.appendChild(nameIn); addWrap.appendChild(fileIn); addWrap.appendChild(addBtn);
+  /* one-tap people import: a JSON file of {people:[{name, photo}]} merges into the list
+     (same-name entries are updated). Only people are touched — no other settings. */
+  const ppIn = el('<input type="file" accept="application/json,.json" style="display:none;">');
+  const ppBtn = el('<button class="toggle-btn">⬆ Import people file</button>');
+  ppBtn.addEventListener('click', () => ppIn.click());
+  ppIn.addEventListener('change', () => {
+    const f = ppIn.files && ppIn.files[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        let data = JSON.parse(String(fr.result));
+        const list = Array.isArray(data) ? data : data.people;
+        if (!Array.isArray(list)) throw new Error('bad');
+        const okDataUrl = s => s == null || (typeof s === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s));
+        const clean = list.filter(p => p && typeof p.name === 'string' && p.name.trim() && okDataUrl(p.photo));
+        if (!clean.length) throw new Error('empty');
+        clean.forEach(p => {
+          const i = S.people.findIndex(x => x.name.trim().toLowerCase() === p.name.trim().toLowerCase());
+          if (i >= 0) S.people[i].photo = p.photo || S.people[i].photo;
+          else S.people.push({ name: p.name.trim(), photo: p.photo || null });
+        });
+        save(); show('settings');
+        alert(clean.length + ' people imported.');
+      } catch (e) { alert("That file doesn't look like a people file."); }
+    };
+    fr.readAsText(f);
+  });
+  addWrap.appendChild(ppBtn); addWrap.appendChild(ppIn);
   pRow.appendChild(addWrap);
   wrap.appendChild(pRow);
 

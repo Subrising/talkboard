@@ -1,4 +1,4 @@
-const CACHE = 'talkboard-v21';
+const CACHE = 'talkboard-v22';
 // Precache the default voice (william); other voices are cached automatically when first used.
 const ASSETS = [
   './',

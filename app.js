@@ -808,11 +808,11 @@ function irisRatio(f, iris, cA, cB) {
 SCREENS.eyeHelp = () => {
   screenEl.appendChild(titleRow('Built-in eye tracking (iPad & iPhone)', 'ask'));
   screenEl.appendChild(el(`<div style="max-width:680px;margin:0 auto;font-size:20px;line-height:1.55;-webkit-user-select:text;user-select:text;">
-    <p><b>Works on:</b> iPad 8th generation or newer (incl. 9th and 10th gen) running <b>iPadOS 18 or later</b>, and iPhone 12 or newer running <b>iOS 18 or later</b>. If you can't find the menu below, update the device first: Settings → General → Software Update. (The bigger iPad screen is much easier for his eyes to aim at than a phone.)</p>
-    <p><b>Turn it on (same on iPad and iPhone):</b> Settings → Accessibility → scroll to <i>Physical and Motor</i> → <b>Eye Tracking</b> → switch on.</p>
-    <p><b>Calibration:</b> the screen shows a bright dot that moves around. Hold the device steady about 45&nbsp;cm from his face (prop it — don't handhold) and let him watch the dot. A bright moving dot grabs attention on its own, so he may pass without needing to understand anything. It takes ~15 seconds.</p>
-    <p><b>If it works:</b> a pointer follows his eyes everywhere in this app, and resting his gaze on a button taps it (that's "Dwell"). Turn the dwell time UP (3–4 seconds) in the same settings so glances don't mis-fire.</p>
-    <p><b>If calibration doesn't take</b> — likely, and fine — use Eye pointing here instead (⚙️ Settings → Ask him → Eye pointing): you read his eyes, and yours don't need calibrating.</p>
+    <p><b>First check the device can do it.</b> If Settings → Accessibility has no <b>Eye Tracking</b> item, that device does not support it — no setting will make it appear. Apple only supports:</p>
+    <p style="margin-left:12px;"><b>iPad:</b> iPad 10th gen or newer, iPad Air 4th gen or newer, iPad mini 6th gen or newer, iPad Pro 11″ 3rd gen / 12.9″ 5th gen (2021) or newer. <b>NOT the iPad 8th or 9th generation.</b><br><b>iPhone:</b> iPhone 12 or newer, or iPhone SE 3rd gen.<br>All need <b>iOS/iPadOS 18 or later</b> (Settings → General → Software Update).</p>
+    <p><b>Turn it on:</b> Settings → Accessibility → <b>Eye Tracking</b> (under <i>Physical and Motor</i>) → switch on. Calibration starts automatically: a dot moves around the screen — prop the device steady about 45&nbsp;cm from his face in good light and let him watch it. A bright moving dot grabs attention on its own; it takes ~15 seconds.</p>
+    <p><b>To make a steady gaze act as a tap ("dwell"):</b> that's in a different place — Settings → Accessibility → <b>Touch → AssistiveTouch</b> → turn AssistiveTouch on → turn <b>Dwell Control</b> on, and set the timer there to 3–4 seconds so glances don't mis-fire. Pointer size and colour: Settings → Accessibility → Pointer Control.</p>
+    <p><b>If the device doesn't support it, or calibration doesn't take</b> — likely, and fine — use Eye pointing here instead (⚙️ Settings → Ask him → Eye pointing): you read his eyes, and yours don't need calibrating.</p>
   </div>`));
 };
 

@@ -344,6 +344,36 @@ function mergePeople(list) {
     else S.people.push({ name: p.name.trim(), photo: p.photo || null });
   });
 }
+/* full-screen gate: the board opens only after the family code decrypts the photos.
+   Asked once per device — after that the device is remembered and never gated again. */
+function showGate() {
+  if (document.getElementById('gate')) return;
+  const wrap = el('<div id="gate" style="position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;overflow-y:auto;"></div>');
+  wrap.appendChild(el('<div style="font-size:64px;">👨‍👩‍👧‍👦</div>'));
+  wrap.appendChild(el('<h2 style="font-size:clamp(26px,4vw,34px);margin:12px 0 8px;">Talk Board</h2>'));
+  wrap.appendChild(el('<div style="font-size:19px;color:var(--muted);max-width:440px;margin-bottom:20px;">Enter the family code to open the board on this device. Only needed the first time — the device is remembered.</div>'));
+  const inp = el('<input class="choice-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Family code" style="max-width:340px;text-align:center;font-size:30px;letter-spacing:.3em;">');
+  const msg = el('<div style="color:var(--red);font-weight:700;min-height:1.4em;margin:8px 0;"></div>');
+  const go = el('<button class="primary-btn" style="max-width:340px;">Open the board</button>');
+  function attempt() {
+    const code = inp.value.trim();
+    if (!code) return;
+    go.disabled = true; msg.style.color = 'var(--muted)'; msg.textContent = 'Unlocking…';
+    decryptPeople(code, PEOPLE_ENC).then(d => {
+      mergePeople(d.people);
+      S.peopleLoaded = true; save();
+      wrap.remove();
+      show(S.setupDone ? 'home' : 'setup');
+    }).catch(() => {
+      go.disabled = false; msg.style.color = 'var(--red)';
+      msg.textContent = "That's not the family code — try again.";
+    });
+  }
+  go.addEventListener('click', attempt);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
+  wrap.appendChild(inp); wrap.appendChild(msg); wrap.appendChild(go);
+  document.body.appendChild(wrap);
+}
 /* ---- read the buttons aloud: he browses by listening (reading never required) ---- */
 let readTimer = null;
 function stopReadAloud() {
@@ -373,32 +403,6 @@ function readAloudChip(grid) {
 }
 
 const SCREENS = {};
-SCREENS.unlock = () => {
-  const wrap = el('<div style="max-width:520px;margin:6vh auto 0;text-align:center;padding:0 10px;"></div>');
-  wrap.appendChild(el('<div style="font-size:72px;">👨‍👩‍👧‍👦</div>'));
-  wrap.appendChild(el('<h2 style="font-size:clamp(26px,4vw,34px);margin:12px 0 8px;">Family photos</h2>'));
-  wrap.appendChild(el('<div style="font-size:19px;color:var(--muted);margin-bottom:20px;">Enter the family code to load everyone\'s photos onto this device. Asked once — the photos then stay on this device.</div>'));
-  const inp = el('<input class="choice-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Family code" style="text-align:center;font-size:30px;letter-spacing:.3em;">');
-  const msg = el('<div style="color:var(--red);font-weight:700;min-height:1.4em;margin:8px 0;"></div>');
-  const go = el('<button class="primary-btn">Unlock the photos</button>');
-  const skip = el('<button class="backbtn" style="margin-top:14px;">Skip for now</button>');
-  go.addEventListener('click', () => {
-    const code = inp.value.trim();
-    if (!code) return;
-    go.disabled = true; msg.textContent = 'Unlocking…'; msg.style.color = 'var(--muted)';
-    decryptPeople(code, PEOPLE_ENC).then(d => {
-      mergePeople(d.people);
-      S.peopleLoaded = true; save();
-      show(S.setupDone ? 'home' : 'setup');
-    }).catch(() => {
-      go.disabled = false; msg.style.color = 'var(--red)';
-      msg.textContent = "That's not the family code — try again.";
-    });
-  });
-  skip.addEventListener('click', () => { S.peopleLoaded = true; save(); show(S.setupDone ? 'home' : 'setup'); });
-  wrap.appendChild(inp); wrap.appendChild(msg); wrap.appendChild(go); wrap.appendChild(el('<div></div>')).appendChild(skip);
-  screenEl.appendChild(wrap);
-};
 function applyChrome() {
   // yesno: giant on-screen YES/NO already exist — a second smaller pair splits motor learning.
   // his modes: no repeat/home icons — one mis-tap lands him somewhere unfamiliar. Family: hold the gear.
@@ -1462,11 +1466,11 @@ SCREENS.settings = () => {
     }
   });
   addWrap.appendChild(nameIn); addWrap.appendChild(fileIn); addWrap.appendChild(addBtn);
-  /* re-open the family-code unlock (e.g. after skipping it on first launch) */
+  /* re-open the family-code unlock (e.g. photos updated, or this device missed them) */
   const unlockBtn = el('<button class="toggle-btn">🔐 Load family photos (code)</button>');
   unlockBtn.addEventListener('click', () => {
     fetch('./people.enc').then(r => { if (!r.ok) throw 0; return r.text(); })
-      .then(t => { PEOPLE_ENC = t; show('unlock'); })
+      .then(t => { PEOPLE_ENC = t; showGate(); })
       .catch(() => alert('The photo bundle could not be loaded — are you online?'));
   });
   addWrap.appendChild(unlockBtn);
@@ -1555,10 +1559,10 @@ keepAwake();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
 
 show(S.setupDone ? 'home' : 'setup');
-/* first launch on this device: offer to unlock the built-in family photos */
+/* first launch on this device: if the encrypted bundle ships with the app, gate on the family code */
 if (!S.peopleLoaded) {
   fetch('./people.enc').then(r => { if (!r.ok) throw 0; return r.text(); })
-    .then(t => { PEOPLE_ENC = t; show('unlock'); })
+    .then(t => { PEOPLE_ENC = t; showGate(); })
     .catch(() => {});
 }
 if ('serviceWorker' in navigator) {
